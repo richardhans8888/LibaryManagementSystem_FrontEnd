@@ -1,18 +1,21 @@
-import { RowDataPacket } from "mysql2";
+import { QueryResult, ResultSetHeader, RowDataPacket } from "mysql2";
 import pool from "./db";
 
 type SqlParam = string | number | boolean | null | Date;
 
-export async function query<T extends RowDataPacket = RowDataPacket>(
+export async function query<
+  T extends QueryResult = RowDataPacket[]
+>(
   sql: string,
   params: SqlParam[] = []
-): Promise<{ rows: T[] | null; error: Error | null }> {
+): Promise<{ rows: T | null; error: Error | null }> {
   try {
-    const [rows] = await pool.execute<RowDataPacket[]>(sql, params);
-    return { rows: rows as T[], error: null };
+    const [rows] = await pool.execute<T>(sql, params);
+    return { rows, error: null };
   } catch (error: unknown) {
     console.error("SQL Error:", error);
-    const normalizedError = error instanceof Error ? error : new Error("Unknown SQL error");
+    const normalizedError =
+      error instanceof Error ? error : new Error("Unknown SQL error");
     return { rows: null, error: normalizedError };
   }
 }

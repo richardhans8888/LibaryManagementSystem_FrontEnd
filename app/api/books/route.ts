@@ -1,7 +1,27 @@
 import { query } from "@/lib/sql";
 import { NextResponse } from "next/server";
-import { BookRow } from "@/types/db";
+import type { ResultSetHeader } from "mysql2";
+import type { BookRow } from "@/types/db";
 
+const toNumber = (value: unknown) => {
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? null : parsed;
+};
+
+const toTinyIntBoolean = (value: unknown): 0 | 1 | null => {
+  if (value === true || value === "true" || value === 1 || value === "1") {
+    return 1;
+  }
+  if (value === false || value === "false" || value === 0 || value === "0") {
+    return 0;
+  }
+  return null;
+};
+
+//
+// ========================================================
+// GET /api/books  → list all books
+// ========================================================
 export async function GET() {
   const sql = `
     SELECT 
@@ -10,12 +30,10 @@ export async function GET() {
       b.year_published,
       b.book_status,
       b.is_digital,
-
+      b.img_link,
       a.first_name AS author_first,
       a.last_name AS author_last,
-
       c.category_name,
-
       br.branch_name
     FROM book b
     JOIN author a ON b.author_id = a.author_id
@@ -24,7 +42,7 @@ export async function GET() {
     ORDER BY b.book_id ASC;
   `;
 
-  const { rows, error } = await query<BookRow>(sql);
+  const { rows, error } = await query<BookRow[]>(sql);
 
   if (error) {
     return NextResponse.json(
@@ -33,5 +51,203 @@ export async function GET() {
     );
   }
 
+  if (!rows) {
+    return NextResponse.json(
+      { success: false, error: "Failed to load books" },
+      { status: 500 }
+    );
+  }
+
   return NextResponse.json({ success: true, books: rows });
+}
+
+//
+// ========================================================
+// POST /api/books  → add a book
+// ========================================================
+export async function POST(req: Request) {
+  const body = await req.json();
+
+  const {
+    title,
+    author_id: rawAuthorId,
+    category_id: rawCategoryId,
+    year_published: rawYearPublished,
+    branch_id: rawBranchId,
+    book_status: rawStatus,
+    is_digital: rawIsDigital,
+    img_link,
+  } = body;
+
+  const author_id = toNumber(rawAuthorId);
+  const category_id = toNumber(rawCategoryId);
+  const year_published = toNumber(rawYearPublished);
+  const branch_id = toNumber(rawBranchId);
+  const book_status = typeof rawStatus === "string" ? rawStatus.trim() : "";
+  const is_digital = toTinyIntBoolean(rawIsDigital);
+
+  if (!title || !book_status || !img_link) {
+    return NextResponse.json(
+      { success: false, error: "Missing required book fields" },
+      { status: 400 }
+    );
+  }
+
+  if (
+    author_id === null ||
+    category_id === null ||
+    year_published === null ||
+    branch_id === null ||
+    is_digital === null
+  ) {
+    return NextResponse.json(
+      { success: false, error: "Missing required book fields" },
+      { status: 400 }
+    );
+  }
+
+  const sql = `
+    INSERT INTO book (
+      title,
+      author_id,
+      category_id,
+      year_published,
+      branch_id,
+      book_status,
+      is_digital,
+      img_link
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+  `;
+
+  const { rows, error } = await query<ResultSetHeader>(sql, [
+    title,
+    author_id,
+    category_id,
+    year_published,
+    branch_id,
+    book_status,
+    is_digital,
+    img_link,
+  ]);
+
+  if (error) {
+    return NextResponse.json(
+      { success: false, error: error.message },
+      { status: 500 }
+    );
+  }
+
+  if (!rows || rows.affectedRows !== 1) {
+    return NextResponse.json(
+      { success: false, error: "Failed to add book" },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({
+    success: true,
+    book_id: rows.insertId,
+  });
+}
+
+//
+// ========================================================
+// PUT /api/books  → update a book
+// ========================================================
+export async function PUT(req: Request) {
+  const body = await req.json();
+
+  const {
+    book_id: rawBookId,
+    title,
+    author_id: rawAuthorId,
+    category_id: rawCategoryId,
+    year_published: rawYearPublished,
+    branch_id: rawBranchId,
+    book_status: rawStatus,
+    is_digital: rawIsDigital,
+    img_link,
+  } = body;
+
+  const book_id = toNumber(rawBookId);
+  const author_id = toNumber(rawAuthorId);
+  const category_id = toNumber(rawCategoryId);
+  const year_published = toNumber(rawYearPublished);
+  const branch_id = toNumber(rawBranchId);
+  const book_status = typeof rawStatus === "string" ? rawStatus.trim() : "";
+  const is_digital = toTinyIntBoolean(rawIsDigital);
+
+  if (!title || !book_status || !img_link) {
+    return NextResponse.json(
+      { success: false, error: "Missing required fields for book update" },
+      { status: 400 }
+    );
+  }
+
+  if (
+    book_id === null ||
+    author_id === null ||
+    category_id === null ||
+    year_published === null ||
+    branch_id === null ||
+    is_digital === null
+  ) {
+    return NextResponse.json(
+      { success: false, error: "Missing required fields for book update" },
+      { status: 400 }
+    );
+  }
+
+  const sql = `
+    UPDATE book
+    SET
+      title = ?,
+      author_id = ?,
+      category_id = ?,
+      year_published = ?,
+      branch_id = ?,
+      book_status = ?,
+      is_digital = ?,
+      img_link = ?
+    WHERE book_id = ?;
+  `;
+
+  const { rows, error } = await query<ResultSetHeader>(sql, [
+    title,
+    author_id,
+    category_id,
+    year_published,
+    branch_id,
+    book_status,
+    is_digital,
+    img_link,
+    book_id,
+  ]);
+
+  if (error) {
+    return NextResponse.json(
+      { success: false, error: error.message },
+      { status: 500 }
+    );
+  }
+
+  if (!rows) {
+    return NextResponse.json(
+      { success: false, error: "Failed to update book" },
+      { status: 500 }
+    );
+  }
+
+  if (rows.affectedRows === 0) {
+    return NextResponse.json(
+      { success: false, error: "Book not found" },
+      { status: 404 }
+    );
+  }
+
+  return NextResponse.json({
+    success: true,
+    updated: rows.affectedRows,
+  });
 }
