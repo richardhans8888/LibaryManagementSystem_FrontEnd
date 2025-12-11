@@ -1,16 +1,24 @@
 "use client";
 import Image from "next/image";
+import { useRef } from "react";
 import hero from "@/public/hero.avif";
 import { BOOKS } from "@/data/books";
 
 export default function Home() {
+  const catRef = useRef<HTMLDivElement | null>(null);
+  const scrollCats = (dir: "left" | "right") => {
+    const el = catRef.current;
+    if (!el) return;
+    const amount = 360;
+    el.scrollTo({ left: dir === "left" ? el.scrollLeft - amount : el.scrollLeft + amount, behavior: "smooth" });
+  };
 
   return (
     <div className="min-h-screen bg-white font-sans">
 
-      <section className="relative text-white">
+      <section className="relative text-black">
         <Image src={hero} alt="Library hero" fill className="object-cover" priority sizes="100vw" placeholder="blur" />
-        <div className="absolute inset-0 bg-black/55" />
+        <div className="absolute inset-0 bg-white/40" />
         <div className="relative z-10 mx-auto max-w-7xl px-6 py-12">
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-[2fr_1fr]">
             <div className="space-y-6">
@@ -56,17 +64,25 @@ export default function Home() {
 
       <main className="mx-auto max-w-7xl px-6">
         <section id="categories" className="mt-12">
-          <div className="mb-6 text-center text-2xl font-semibold text-black">Featured Categories</div>
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-3 lg:grid-cols-5">
+          <div className="mb-3 text-center text-2xl font-semibold text-black">Featured Categories</div>
+          <div className="mb-4 flex justify-end gap-2">
+            <button onClick={() => scrollCats("left")} className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm hover:bg-zinc-100">◀</button>
+            <button onClick={() => scrollCats("right")} className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm hover:bg-zinc-100">▶</button>
+          </div>
+          <div ref={catRef} className="flex snap-x snap-mandatory gap-5 overflow-x-auto pb-2">
             {[
-              { title: "Educational", img: "https://images.unsplash.com/photo-1516979187457-637abb4f9353?q=80&w=800&auto=format&fit=crop" },
-              { title: "Horror", img: "https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=800&auto=format&fit=crop" },
-              { title: "Fantasy", img: "https://images.unsplash.com/photo-1507925921958-8a62f3d1a50d?q=80&w=800&auto=format&fit=crop" },
-              { title: "History", img: "https://images.unsplash.com/photo-1528209712924-8b4b12dd5fcb?q=80&w=800&auto=format&fit=crop" },
-              { title: "Mystery & Detective", img: "https://images.unsplash.com/photo-1495462911434-be47104d70fa?q=80&w=800&auto=format&fit=crop" },
+              { title: "Educational" },
+              { title: "Horror" },
+              { title: "Fantasy" },
+              { title: "History" },
+              { title: "Mystery & Detective" },
+              { title: "Science" },
+              { title: "Technology" },
             ].map((c) => (
-              <a key={c.title} href="#" className="group relative block aspect-[5/3] overflow-hidden rounded-lg">
-                <img src={c.img} alt={c.title} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
+              <a key={c.title} href="#" className="group relative w-[320px] shrink-0 snap-start overflow-hidden rounded-lg">
+                <div className="aspect-[5/3] w-full">
+                  <Image src="/book.1.jpg" alt={c.title} width={640} height={384} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
+                </div>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
                 <div className="absolute bottom-3 left-3">
                   <div className="rounded-md bg-white/90 px-2 py-1 text-sm font-medium text-[#0d2538] shadow-sm">{c.title}</div>

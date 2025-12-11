@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Playfair_Display, DM_Sans } from "next/font/google";
 import "./globals.css";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
+import LoginModalRoot from "@/components/LoginModalRoot";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,10 +38,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} ${dmSans.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} ${dmSans.variable} antialiased min-h-screen flex flex-col bg-white text-black`}
       >
         <Header />
-        {children}
+        <div className="flex-1">{children}</div>
+        <LoginModalRoot />
         <Footer />
       </body>
     </html>
