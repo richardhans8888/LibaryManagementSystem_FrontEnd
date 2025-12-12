@@ -3,13 +3,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const links = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/dashboard/books", label: "Books" },
-  { href: "/dashboard/members", label: "Members" },
-  { href: "/dashboard/loans", label: "Loans" },
-  { href: "/dashboard/branches", label: "Branches" },
-  { href: "/dashboard/reports", label: "Reports" },
-  { href: "/dashboard/settings", label: "Settings" },
+  { href: "/dashboard/pickup", label: "Pickup" },
+  { href: "/dashboard/borrowings", label: "Borrowings" },
 ];
 
 export default function Sidebar() {

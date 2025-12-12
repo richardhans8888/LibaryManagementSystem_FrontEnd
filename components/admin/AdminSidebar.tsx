@@ -3,15 +3,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const links = [
-  { href: "/admin", label: "Dashboard" },
   { href: "/admin/books", label: "Books" },
   { href: "/admin/authors", label: "Authors" },
   { href: "/admin/categories", label: "Categories" },
+  { href: "/admin/pickup", label: "Pickup" },
+  { href: "/admin/borrowings", label: "Borrowings" },
   { href: "/admin/members", label: "Members" },
-  { href: "/admin/loans", label: "Loans" },
-  { href: "/admin/borrow-requests", label: "Borrow Requests" },
   { href: "/admin/branches", label: "Branches" },
-  { href: "/dashboard/settings", label: "Settings" },
 ];
 
 export default function AdminSidebar() {

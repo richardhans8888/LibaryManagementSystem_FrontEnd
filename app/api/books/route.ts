@@ -299,6 +299,17 @@ export async function PUT(req: Request) {
     );
   }
 
+  if (book_status !== "borrowed") {
+    await query<ResultSetHeader>(
+      `DELETE FROM pickup WHERE book_id = ?;`,
+      [book_id]
+    ).catch(() => {});
+    await query<ResultSetHeader>(
+      `DELETE FROM borrowing WHERE book_id = ? AND return_date IS NULL;`,
+      [book_id]
+    ).catch(() => {});
+  }
+
   return NextResponse.json({
     success: true,
     updated: rows.affectedRows,

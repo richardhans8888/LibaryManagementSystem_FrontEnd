@@ -23,8 +23,8 @@ type BookRow = {
   branch_name: string;
 };
 
-const STATUS_OPTIONS = ["available", "reserved", "loss", "borrowed"] as const;
-const EDITABLE_STATUS_OPTIONS = ["available", "reserved", "loss"] as const;
+const STATUS_OPTIONS = ["available", "reserved", "lost", "borrowed"] as const;
+const EDITABLE_STATUS_OPTIONS = ["available", "reserved", "lost"] as const;
 
 type Option = { value: number; label: string };
 
@@ -533,6 +533,9 @@ export default function Page() {
                               {capitalize(s)}
                             </option>
                           ))}
+                          <option value="borrowed" disabled>
+                            Borrowed (Automatic)
+                          </option>
                         </select>
                         <input
                           className="rounded-xl border border-zinc-300 px-3 py-2 text-sm lg:col-span-2"
