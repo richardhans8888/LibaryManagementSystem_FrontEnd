@@ -140,7 +140,6 @@ export default function Page() {
     <div className="space-y-6">
       <div>
         <div className="text-xl font-semibold">Categories</div>
-        <div className="text-sm text-black/60">Add, edit, or remove categories</div>
       </div>
 
       <form onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">

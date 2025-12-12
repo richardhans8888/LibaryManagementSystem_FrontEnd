@@ -38,6 +38,8 @@ export async function GET(req: Request) {
       b.book_status,
       b.is_digital,
       b.img_link,
+      b.book_desc,
+      b.language,
       b.author_id,
       b.category_id,
       b.branch_id,
@@ -116,6 +118,8 @@ export async function POST(req: Request) {
     book_status: rawStatus,
     is_digital: rawIsDigital,
     img_link,
+    book_desc,
+    language,
   } = body;
 
   const author_id = toNumber(rawAuthorId);
@@ -154,9 +158,11 @@ export async function POST(req: Request) {
       branch_id,
       book_status,
       is_digital,
-      img_link
+      img_link,
+      book_desc,
+      language
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
   `;
 
   const { rows, error } = await query<ResultSetHeader>(sql, [
@@ -168,6 +174,8 @@ export async function POST(req: Request) {
     book_status,
     is_digital,
     img_link,
+    book_desc ?? null,
+    language ?? null,
   ]);
 
   if (error) {
@@ -207,6 +215,8 @@ export async function PUT(req: Request) {
     book_status: rawStatus,
     is_digital: rawIsDigital,
     img_link,
+    book_desc,
+    language,
   } = body;
 
   const book_id = toNumber(rawBookId);
@@ -248,7 +258,9 @@ export async function PUT(req: Request) {
       branch_id = ?,
       book_status = ?,
       is_digital = ?,
-      img_link = ?
+      img_link = ?,
+      book_desc = ?,
+      language = ?
     WHERE book_id = ?;
   `;
 
@@ -261,6 +273,8 @@ export async function PUT(req: Request) {
     book_status,
     is_digital,
     img_link,
+    book_desc ?? null,
+    language ?? null,
     book_id,
   ]);
 

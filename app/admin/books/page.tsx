@@ -12,6 +12,8 @@ type BookRow = {
   book_status: string;
   is_digital: 0 | 1;
   img_link: string;
+  book_desc?: string | null;
+  language?: string | null;
   author_id: number;
   author_first: string;
   author_last: string;
@@ -22,7 +24,7 @@ type BookRow = {
 };
 
 const STATUS_OPTIONS = ["available", "reserved", "loss", "borrowed"] as const;
-const BOOKABLE_STATUS_OPTIONS = ["available", "reserved", "loss"] as const;
+const EDITABLE_STATUS_OPTIONS = ["available", "reserved", "loss"] as const;
 
 type Option = { value: number; label: string };
 
@@ -36,10 +38,12 @@ export default function Page() {
   const [authorId, setAuthorId] = useState<number | null>(null);
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [branchId, setBranchId] = useState<number | null>(null);
-  const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]>("available");
+  const [status] = useState<(typeof STATUS_OPTIONS)[number]>("available");
   const [isDigital, setIsDigital] = useState(false);
   const [year, setYear] = useState("");
   const [imgLink, setImgLink] = useState("");
+  const [bookDesc, setBookDesc] = useState("");
+  const [language, setLanguage] = useState("");
 
   const [loadingBooks, setLoadingBooks] = useState(false);
   const [loadingOptions, setLoadingOptions] = useState(false);
@@ -120,9 +124,11 @@ export default function Page() {
         category_id: categoryId,
         year_published: Number(year),
         branch_id: branchId,
-        book_status: status,
+        book_status: "available",
         is_digital: isDigital ? 1 : 0,
         img_link: imgLink.trim(),
+        book_desc: bookDesc.trim() || null,
+        language: language.trim() || null,
       };
       const res = await fetch("/api/books", {
         method: "POST",
@@ -141,9 +147,11 @@ export default function Page() {
           book_id: data.book_id,
           title: title.trim(),
           year_published: Number(year),
-          book_status: status,
+          book_status: "available",
           is_digital: isDigital ? 1 : 0,
           img_link: imgLink.trim(),
+          book_desc: bookDesc.trim() || null,
+          language: language.trim() || null,
           author_id: authorId,
           author_first: author?.first_name || "",
           author_last: author?.last_name || "",
@@ -159,10 +167,11 @@ export default function Page() {
       setAuthorId(null);
       setCategoryId(null);
       setBranchId(null);
-      setStatus("available");
       setIsDigital(false);
       setYear("");
       setImgLink("");
+      setBookDesc("");
+      setLanguage("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to add book");
     } finally {
@@ -266,17 +275,19 @@ export default function Page() {
     setSavingEdit(true);
     setError(null);
     try {
-      const payload = {
-        book_id: editingId,
-        title: editBook.title?.trim(),
-        author_id: editBook.author_id,
-        category_id: editBook.category_id,
-        year_published: editBook.year_published,
-        branch_id: editBook.branch_id,
-        book_status: editBook.book_status,
-        is_digital: editBook.is_digital,
-        img_link: editBook.img_link?.trim(),
-      };
+    const payload = {
+      book_id: editingId,
+      title: editBook.title?.trim(),
+      author_id: editBook.author_id,
+      category_id: editBook.category_id,
+      year_published: editBook.year_published,
+      branch_id: editBook.branch_id,
+      book_status: editBook.book_status,
+      is_digital: editBook.is_digital,
+      img_link: editBook.img_link?.trim(),
+      book_desc: (editBook.book_desc ?? "").toString().trim() || null,
+      language: (editBook.language ?? "").toString().trim() || null,
+    };
       if (
         !payload.title ||
         payload.author_id === undefined ||
@@ -311,6 +322,8 @@ export default function Page() {
                 book_status: payload.book_status!,
                 is_digital: payload.is_digital as 0 | 1,
                 img_link: payload.img_link!,
+                book_desc: payload.book_desc ?? null,
+                language: payload.language ?? null,
                 author_id: payload.author_id!,
                 author_first: author?.first_name || b.author_first,
                 author_last: author?.last_name || b.author_last,
@@ -399,30 +412,32 @@ export default function Page() {
 
           <input
             className="rounded-xl border border-zinc-300 px-3 py-2 text-sm"
-            placeholder="Year published"
+            placeholder="Year Published"
             value={year}
             onChange={(e) => setYear(e.target.value)}
             required
           />
 
-          <select
-            className="rounded-xl border border-zinc-300 px-3 py-2 text-sm"
-            value={status}
-            onChange={(e) => setStatus(e.target.value as (typeof BOOKABLE_STATUS_OPTIONS)[number])}
-          >
-            {BOOKABLE_STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>
-                {capitalize(s)}
-              </option>
-            ))}
-          </select>
+          <div className="rounded-xl border border-zinc-300 px-3 py-2 text-sm bg-zinc-50">Status: Available</div>
 
           <input
             className="rounded-xl border border-zinc-300 px-3 py-2 text-sm lg:col-span-2"
-            placeholder="Image link"
+            placeholder="Image Link"
             value={imgLink}
             onChange={(e) => setImgLink(e.target.value)}
             required
+          />
+          <input
+            className="rounded-xl border border-zinc-300 px-3 py-2 text-sm"
+            placeholder="Language"
+            value={language}
+            onChange={(e) => setLanguage(e.target.value)}
+          />
+          <textarea
+            className="rounded-xl border border-zinc-300 px-3 py-2 text-sm lg:col-span-3 min-h-[96px]"
+            placeholder="Description"
+            value={bookDesc}
+            onChange={(e) => setBookDesc(e.target.value)}
           />
         </div>
 
@@ -513,7 +528,7 @@ export default function Page() {
                           value={editBook.book_status ?? b.book_status}
                           onChange={(e) => setEditBook((curr) => ({ ...curr, book_status: e.target.value }))}
                         >
-                          {BOOKABLE_STATUS_OPTIONS.map((s) => (
+                          {EDITABLE_STATUS_OPTIONS.map((s) => (
                             <option key={s} value={s}>
                               {capitalize(s)}
                             </option>
@@ -523,7 +538,19 @@ export default function Page() {
                           className="rounded-xl border border-zinc-300 px-3 py-2 text-sm lg:col-span-2"
                           value={editBook.img_link ?? ""}
                           onChange={(e) => setEditBook((curr) => ({ ...curr, img_link: e.target.value }))}
-                          placeholder="Image link"
+                          placeholder="Image Link"
+                        />
+                        <input
+                          className="rounded-xl border border-zinc-300 px-3 py-2 text-sm"
+                          value={editBook.language ?? ""}
+                          onChange={(e) => setEditBook((curr) => ({ ...curr, language: e.target.value }))}
+                          placeholder="Language"
+                        />
+                        <textarea
+                          className="rounded-xl border border-zinc-300 px-3 py-2 text-sm lg:col-span-2 min-h-[96px]"
+                          value={editBook.book_desc ?? ""}
+                          onChange={(e) => setEditBook((curr) => ({ ...curr, book_desc: e.target.value }))}
+                          placeholder="Description"
                         />
                       </div>
                       <div className="mt-4 flex flex-wrap gap-3">

@@ -7,6 +7,8 @@ export interface BookRow extends RowDataPacket {
   book_status: string;
   is_digital: 0 | 1;
   img_link: string;
+  book_desc?: string | null;
+  language?: string | null;
 
   author_id: number;
   author_first: string;

@@ -155,7 +155,7 @@ export default function Home() {
               <div className="col-span-full text-sm text-black/60">No books available</div>
             ) : (
               latestBooks.map((item) => (
-                <div key={item.book_id} className="group overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm transition hover:shadow-md">
+                <Link key={item.book_id} href={`/books/${item.book_id}`} className="group overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm transition hover:shadow-md">
                   <div className="aspect-[5/3] w-full bg-zinc-100">
                     <img src={item.img_link} alt={item.title} className="h-full w-full object-cover" />
                   </div>
@@ -166,7 +166,7 @@ export default function Home() {
                     </div>
                     <div className="mt-1 text-[11px] uppercase tracking-wide text-zinc-500">{item.category_name}</div>
                   </div>
-                </div>
+                </Link>
               ))
             )}
           </div>

@@ -88,14 +88,13 @@ export default function Page() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <div className="text-2xl font-semibold">All Books</div>
-          <div className="text-sm text-black/60">Filter by category to explore the catalog.</div>
         </div>
         <select
           value={categoryId ?? ""}
           onChange={(e) => onCategoryChange(e.target.value)}
           className="rounded-xl border border-zinc-300 px-3 py-2 text-sm"
         >
-          <option value="">All categories</option>
+          <option value="">All</option>
           {categories.map((c) => (
             <option key={c.category_id} value={c.category_id}>
               {c.category_name}
@@ -110,10 +109,10 @@ export default function Page() {
         {loading ? (
           <div className="col-span-full text-sm text-black/60">Loading books...</div>
         ) : latestBooks.length === 0 ? (
-          <div className="col-span-full text-sm text-black/60">No books available</div>
+          <div className="col-span-full text-sm text-black/60">No books available.</div>
         ) : (
           latestBooks.map((b) => (
-            <div key={b.book_id} className="group overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm transition hover:shadow-md">
+            <Link href={`/books/${b.book_id}`} key={b.book_id} className="group overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm transition hover:shadow-md">
               <div className="aspect-[5/3] w-full bg-zinc-100">
                 <img src={b.img_link} alt={b.title} className="h-full w-full object-cover" />
               </div>
@@ -123,30 +122,13 @@ export default function Page() {
                   {b.author_first} {b.author_last}
                 </div>
                 <div className="text-[11px] uppercase tracking-wide text-zinc-500">{b.category_name}</div>
-                <div className="flex items-center gap-2 pt-1">
-                  <span className={statusBadge(b.book_status)}>{b.book_status}</span>
-                  <span className="text-[11px] text-black/60">{b.is_digital ? "Digital" : "Physical"}</span>
-                </div>
               </div>
-            </div>
+            </Link>
           ))
         )}
       </div>
 
       <div className="mt-10 text-sm text-black/60">
-{`SQL reference:
--- List books (optional category filter)
-SELECT 
-  b.book_id, b.title, b.year_published, b.book_status, b.is_digital,
-  b.img_link, b.author_id, b.category_id, b.branch_id,
-  a.first_name AS author_first, a.last_name AS author_last,
-  c.category_name, br.branch_name
-FROM book b
-JOIN author a ON b.author_id = a.author_id
-JOIN category c ON b.category_id = c.category_id
-JOIN branch br ON b.branch_id = br.branch_id
-WHERE (${categoryId ?? "NULL"} IS NULL OR b.category_id = ${categoryId ?? "?"})
-ORDER BY b.book_id DESC;`}
       </div>
     </div>
   );
