@@ -21,6 +21,30 @@ export interface BookRow extends RowDataPacket {
   branch_name: string;
 }
 
+export interface DigitalBookRow extends RowDataPacket {
+  book_id: number;
+  title: string;
+  year_published: number;
+  book_status: string;
+  is_digital: 0 | 1;
+  img_link: string;
+  book_desc?: string | null;
+  language?: string | null;
+
+  author_id: number;
+  author_first: string;
+  author_last: string;
+
+  category_id: number;
+  category_name: string;
+
+  storage_id: number;
+  asset_url: string;
+  drm_vendor?: string | null;
+  asset_checksum?: string | null;
+  filesize_mb?: string | null;
+}
+
 export interface AuthorRow extends RowDataPacket {
   author_id: number;
   first_name: string;
