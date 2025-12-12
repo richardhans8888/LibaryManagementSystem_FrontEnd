@@ -1,10 +1,28 @@
 "use client";
 import Image from "next/image";
-import { useRef } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useRef, useState } from "react";
 import hero from "@/public/hero.avif";
-import { BOOKS } from "@/data/books";
+
+type Category = { category_id: number; category_name: string; category_desc: string | null };
+type BookRow = {
+  book_id: number;
+  title: string;
+  year_published: number;
+  book_status: string;
+  is_digital: 0 | 1;
+  img_link: string;
+  author_first: string;
+  author_last: string;
+  category_name: string;
+  branch_name: string;
+};
 
 export default function Home() {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [books, setBooks] = useState<BookRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const catRef = useRef<HTMLDivElement | null>(null);
   const scrollCats = (dir: "left" | "right") => {
     const el = catRef.current;
@@ -12,6 +30,38 @@ export default function Home() {
     const amount = 360;
     el.scrollTo({ left: dir === "left" ? el.scrollLeft - amount : el.scrollLeft + amount, behavior: "smooth" });
   };
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [cRes, bRes] = await Promise.all([fetch("/api/category"), fetch("/api/books")]);
+        const [cData, bData] = await Promise.all([cRes.json(), bRes.json()]);
+        if (!cRes.ok || !cData.success) throw new Error(cData.error || "Failed to load categories");
+        if (!bRes.ok || !bData.success) throw new Error(bData.error || "Failed to load books");
+        setCategories(cData.categories || []);
+        setBooks(bData.books || []);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to load data");
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
+
+  const latestBooks = useMemo(
+    () => books.slice().sort((a, b) => b.book_id - a.book_id).slice(0, 5),
+    [books]
+  );
+
+  const gradients = [
+    "from-indigo-500 via-purple-500 to-pink-500",
+    "from-cyan-500 via-sky-500 to-blue-500",
+    "from-amber-400 via-orange-500 to-rose-500",
+    "from-emerald-400 via-green-500 to-teal-500",
+    "from-fuchsia-500 via-purple-500 to-indigo-500",
+    "from-blue-500 via-indigo-500 to-purple-500",
+  ];
 
   return (
     <div className="min-h-screen bg-white font-sans">
@@ -70,42 +120,55 @@ export default function Home() {
             <button onClick={() => scrollCats("right")} className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm hover:bg-zinc-100">▶</button>
           </div>
           <div ref={catRef} className="flex snap-x snap-mandatory gap-5 overflow-x-auto pb-2">
-            {[
-              { title: "Educational" },
-              { title: "Horror" },
-              { title: "Fantasy" },
-              { title: "History" },
-              { title: "Mystery & Detective" },
-              { title: "Science" },
-              { title: "Technology" },
-            ].map((c) => (
-              <a key={c.title} href="#" className="group relative w-[320px] shrink-0 snap-start overflow-hidden rounded-lg">
-                <div className="aspect-[5/3] w-full">
-                  <Image src="/book.1.jpg" alt={c.title} width={640} height={384} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-                <div className="absolute bottom-3 left-3">
-                  <div className="rounded-md bg-white/90 px-2 py-1 text-sm font-medium text-[#0d2538] shadow-sm">{c.title}</div>
-                </div>
-              </a>
-            ))}
+            {loading ? (
+              <div className="text-sm text-black/60 px-3 py-2">Loading categories...</div>
+            ) : error ? (
+              <div className="text-sm text-rose-700 px-3 py-2">{error}</div>
+            ) : categories.length === 0 ? (
+              <div className="text-sm text-black/60 px-3 py-2">No categories available</div>
+            ) : (
+              categories.map((c, idx) => (
+                <Link
+                  key={c.category_id}
+                  href={`/books?category_id=${c.category_id}`}
+                  className="group relative w-[320px] shrink-0 snap-start overflow-hidden rounded-lg"
+                >
+                  <div className={`aspect-[5/3] w-full bg-gradient-to-br ${gradients[idx % gradients.length]} transition-transform group-hover:scale-[1.02]`} />
+                  <div className="absolute inset-0 bg-black/10" />
+                  <div className="absolute bottom-3 left-3">
+                    <div className="rounded-md bg-white/90 px-2 py-1 text-sm font-medium text-[#0d2538] shadow-sm">{c.category_name}</div>
+                  </div>
+                </Link>
+              ))
+            )}
           </div>
         </section>
 
         <section id="latest" className="mt-12">
           <div className="mb-6 text-center text-2xl font-semibold text-black">Latest Books</div>
           <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4">
-            {BOOKS.sort((a,b)=> new Date(b.addedAt).getTime()-new Date(a.addedAt).getTime()).slice(0,8).map((item) => (
-              <a key={item.id} href={`/books/${item.id}`} className="group overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm transition hover:shadow-md">
-                <div className="aspect-[5/3] w-full">
-                  <img src={item.cover} alt={item.title} className="h-full w-full object-cover" />
+            {loading ? (
+              <div className="col-span-full text-sm text-black/60">Loading books...</div>
+            ) : error ? (
+              <div className="col-span-full text-sm text-rose-700">{error}</div>
+            ) : latestBooks.length === 0 ? (
+              <div className="col-span-full text-sm text-black/60">No books available</div>
+            ) : (
+              latestBooks.map((item) => (
+                <div key={item.book_id} className="group overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm transition hover:shadow-md">
+                  <div className="aspect-[5/3] w-full bg-zinc-100">
+                    <img src={item.img_link} alt={item.title} className="h-full w-full object-cover" />
+                  </div>
+                  <div className="p-3">
+                    <div className="text-sm font-semibold">{item.title}</div>
+                    <div className="mt-1 text-xs text-zinc-600">
+                      {item.author_first} {item.author_last}
+                    </div>
+                    <div className="mt-1 text-[11px] uppercase tracking-wide text-zinc-500">{item.category_name}</div>
+                  </div>
                 </div>
-                <div className="p-3">
-                  <div className="text-sm font-semibold">{item.title}</div>
-                  <div className="mt-1 text-xs text-zinc-600">{item.author}</div>
-                </div>
-              </a>
-            ))}
+              ))
+            )}
           </div>
         </section>
       </main>

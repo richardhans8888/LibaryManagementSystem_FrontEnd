@@ -7,10 +7,11 @@ type Role = "member" | "admin";
 export default function LoginPage() {
   const router = useRouter();
   const [role, setRole] = useState<Role>("member");
-  const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPwd, setShowPwd] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const close = () => {
     try {
@@ -22,7 +23,32 @@ export default function LoginPage() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await new Promise((r) => setTimeout(r, 500));
+    setLoading(true);
+    setError(null);
+    try {
+      if (role === "admin") {
+        document.cookie = "admin_session=true; path=/; max-age=604800";
+        document.cookie = "member_public=; path=/; max-age=0";
+        document.cookie = "member_session=; path=/; max-age=0";
+        router.replace("/admin");
+        return;
+      }
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), password }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Login failed");
+      }
+      document.cookie = "admin_session=; path=/; max-age=0";
+      router.replace("/dashboard");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Login failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -30,116 +56,75 @@ export default function LoginPage() {
       <div className="absolute inset-0 bg-black/40" onClick={close} />
       <div className="relative z-10 w-full max-w-md rounded-xl bg-white shadow-xl ring-1 ring-zinc-200">
         <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-200">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setMode("login")}
-              className={`rounded-md px-3 py-1 text-sm ${mode === "login" ? "bg-zinc-900 text-white" : "bg-zinc-100 text-black/80"}`}
-            >
-              Log in
-            </button>
-            <button
-              onClick={() => setMode("register")}
-              className={`rounded-md px-3 py-1 text-sm ${mode === "register" ? "bg-zinc-900 text-white" : "bg-zinc-100 text-black/80"}`}
-            >
-              Sign up
-            </button>
-          </div>
+          <div className="text-base font-semibold">Sign In</div>
           <button onClick={close} aria-label="Close" className="rounded-md px-2 py-1 text-black/70 hover:bg-zinc-100">✕</button>
         </div>
 
-        <div className="px-6 py-5">
-          <div className="mb-4 text-center text-xl font-semibold">{mode === "login" ? "Log in" : "Create account"}</div>
-
-          <div className="mb-3 flex items-center justify-center gap-2">
+        <div className="px-6 py-5 space-y-4">
+          <div className="flex items-center justify-center gap-2">
             <button
+              type="button"
               onClick={() => setRole("member")}
-              className={`rounded-md px-3 py-1 text-xs ${role === "member" ? "bg-[#3ea6ff] text-[#0d2538]" : "bg-zinc-100 text-black/80"}`}
+              className={`rounded-md px-3 py-1 text-xs ${role === "member" ? "bg-zinc-900 text-white" : "bg-zinc-100 text-black/80"}`}
             >
               Member
             </button>
             <button
+              type="button"
               onClick={() => setRole("admin")}
-              className={`rounded-md px-3 py-1 text-xs ${role === "admin" ? "bg-[#3ea6ff] text-[#0d2538]" : "bg-zinc-100 text-black/80"}`}
+              className={`rounded-md px-3 py-1 text-xs ${role === "admin" ? "bg-zinc-900 text-white" : "bg-zinc-100 text-black/80"}`}
             >
               Admin
             </button>
           </div>
 
-          <div className="space-y-3">
-            <button className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm text-left flex items-center gap-2">
-              <span className="inline-block h-4 w-4">🇬</span>
-              <span>Continue with Google</span>
-            </button>
-            <button className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm text-left flex items-center gap-2">
-              <span className="inline-block h-4 w-4"></span>
-              <span>Continue with Apple</span>
-            </button>
-            <button className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm text-left flex items-center gap-2">
-              <span className="inline-block h-4 w-4">in</span>
-              <span>Continue with LinkedIn</span>
-            </button>
-          </div>
-
-          <div className="my-4 flex items-center gap-2 text-xs text-black/50">
-            <div className="h-px flex-1 bg-zinc-200" />
-            <div>OR</div>
-            <div className="h-px flex-1 bg-zinc-200" />
-          </div>
+          {error ? <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900">{error}</div> : null}
 
           <form onSubmit={onSubmit} className="space-y-3">
-            {mode === "register" && (
+            <div>
+              <label className="text-xs text-black/60 block mb-1">Email</label>
               <input
-                type="text"
-                placeholder="Full name"
+                type="email"
+                required={role === "member"}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="email@example.com"
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
+                disabled={role === "admin"}
               />
-            )}
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email"
-              className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
-            />
-            <div className="relative">
-              <input
-                type={showPwd ? "text" : "password"}
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 pr-10 text-sm"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPwd((v) => !v)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-xs text-black/70 hover:bg-zinc-100"
-              >
-                {showPwd ? "Hide" : "Show"}
-              </button>
             </div>
-            <button type="submit" className="w-full rounded-md bg-zinc-900 px-4 py-2 text-sm text-white">
-              Continue
+            <div>
+              <label className="text-xs text-black/60 block mb-1">Password</label>
+              <div className="relative">
+                <input
+                  type={showPwd ? "text" : "password"}
+                  required={role === "member"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={role === "admin" ? "Not required for Admin" : "Password"}
+                  className="w-full rounded-md border border-zinc-300 px-3 py-2 pr-10 text-sm"
+                  disabled={role === "admin"}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPwd((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-xs text-black/70 hover:bg-zinc-100"
+                >
+                  {showPwd ? "Hide" : "Show"}
+                </button>
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-md bg-zinc-900 px-4 py-2 text-sm text-white disabled:opacity-60"
+            >
+              {loading ? "Signing in..." : "Continue"}
             </button>
           </form>
 
-          {mode === "login" ? (
-            <div className="mt-3 text-center text-sm">
-              <a href="#" className="text-black/70 hover:underline">Forgot Password?</a>
-            </div>
-          ) : null}
-
-          <div className="mt-6 border-t border-zinc-200 pt-4 text-center text-sm text-black/70">
-            {mode === "login" ? (
-              <span>
-                Not a member yet? <button onClick={() => setMode("register")} className="text-black underline">Sign up</button>
-              </span>
-            ) : (
-              <span>
-                Already have an account? <button onClick={() => setMode("login")} className="text-black underline">Log in</button>
-              </span>
-            )}
+          <div className="text-xs text-black/60 text-center">
+            Accounts are created by staff. Need help? Contact support.
           </div>
         </div>
       </div>

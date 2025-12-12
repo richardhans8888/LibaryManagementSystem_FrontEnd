@@ -6,12 +6,16 @@ export interface BookRow extends RowDataPacket {
   year_published: number;
   book_status: string;
   is_digital: 0 | 1;
+  img_link: string;
 
+  author_id: number;
   author_first: string;
   author_last: string;
 
+  category_id: number;
   category_name: string;
 
+  branch_id: number;
   branch_name: string;
 }
 
@@ -37,8 +41,10 @@ export interface MemberRow extends RowDataPacket {
   member_id: number;
   first_name: string;
   last_name: string;
+  address: string | null;
   phone_number: string | null;
   email: string | null;
+   password: string | null;
   membership_start_date: string;
   membership_end_date: string | null;
   member_status: string;

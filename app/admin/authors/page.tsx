@@ -1,44 +1,44 @@
 "use client";
 import { useEffect, useState } from "react";
 
-type Branch = {
-  branch_id: number;
-  branch_name: string;
-  branch_address: string;
+type Author = {
+  author_id: number;
+  first_name: string;
+  last_name: string;
 };
 
 export default function Page() {
-  const [branches, setBranches] = useState<Branch[]>([]);
-  const [name, setName] = useState("");
-  const [address, setAddress] = useState("");
+  const [authors, setAuthors] = useState<Author[]>([]);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editName, setEditName] = useState("");
-  const [editAddress, setEditAddress] = useState("");
+  const [editFirst, setEditFirst] = useState("");
+  const [editLast, setEditLast] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const loadBranches = async () => {
+  const loadAuthors = async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/branch");
+      const res = await fetch("/api/author");
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Failed to load branches");
+        throw new Error(data.error || "Failed to load authors");
       }
-      setBranches(data.branches || []);
+      setAuthors(data.authors || []);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load branches");
+      setError(e instanceof Error ? e.message : "Failed to load authors");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadBranches();
+    loadAuthors();
   }, []);
 
   const submit = async (e: React.FormEvent) => {
@@ -46,42 +46,42 @@ export default function Page() {
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch("/api/branch", {
+      const res = await fetch("/api/author", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          branch_name: name.trim(),
-          branch_address: address.trim(),
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
         }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Failed to add branch");
+        throw new Error(data.error || "Failed to add author");
       }
-      setBranches((curr) => [
-        { branch_id: data.branch_id, branch_name: name.trim(), branch_address: address.trim() },
+      setFirstName("");
+      setLastName("");
+      setAuthors((curr) => [
+        { author_id: data.author_id, first_name: firstName.trim(), last_name: lastName.trim() },
         ...curr,
       ]);
-      setName("");
-      setAddress("");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to add branch");
+      setError(e instanceof Error ? e.message : "Failed to add author");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const startEdit = (b: Branch) => {
-    setEditingId(b.branch_id);
-    setEditName(b.branch_name);
-    setEditAddress(b.branch_address);
+  const startEdit = (a: Author) => {
+    setEditingId(a.author_id);
+    setEditFirst(a.first_name);
+    setEditLast(a.last_name);
     setError(null);
   };
 
   const cancelEdit = () => {
     setEditingId(null);
-    setEditName("");
-    setEditAddress("");
+    setEditFirst("");
+    setEditLast("");
   };
 
   const saveEdit = async () => {
@@ -89,46 +89,45 @@ export default function Page() {
     setSavingEdit(true);
     setError(null);
     try {
-      const res = await fetch("/api/branch", {
+      const res = await fetch(`/api/author/${editingId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          branch_id: editingId,
-          branch_name: editName.trim(),
-          branch_address: editAddress.trim(),
+          first_name: editFirst.trim(),
+          last_name: editLast.trim(),
         }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Failed to update branch");
+        throw new Error(data.error || "Failed to update author");
       }
-      setBranches((curr) =>
-        curr.map((b) =>
-          b.branch_id === editingId ? { ...b, branch_name: editName.trim(), branch_address: editAddress.trim() } : b
+      setAuthors((curr) =>
+        curr.map((a) =>
+          a.author_id === editingId ? { ...a, first_name: editFirst.trim(), last_name: editLast.trim() } : a
         )
       );
       cancelEdit();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update branch");
+      setError(e instanceof Error ? e.message : "Failed to update author");
     } finally {
       setSavingEdit(false);
     }
   };
 
-  const deleteBranch = async (id: number) => {
-    if (!confirm("Delete this branch?")) return;
+  const deleteAuthor = async (id: number) => {
+    if (!confirm("Delete this author?")) return;
     setDeletingId(id);
     setError(null);
     try {
-      const res = await fetch(`/api/branch/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/author/${id}`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Failed to delete branch");
+        throw new Error(data.error || "Failed to delete author");
       }
-      setBranches((curr) => curr.filter((b) => b.branch_id !== id));
+      setAuthors((curr) => curr.filter((a) => a.author_id !== id));
       if (editingId === id) cancelEdit();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete branch");
+      setError(e instanceof Error ? e.message : "Failed to delete author");
     } finally {
       setDeletingId(null);
     }
@@ -136,25 +135,27 @@ export default function Page() {
 
   return (
     <div className="space-y-6">
-      <div className="text-xl font-semibold">Branches</div>
+      <div>
+        <div className="text-xl font-semibold">Authors</div>
+      </div>
 
       <form onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
         <input
           className="rounded-xl border border-zinc-300 px-3 py-2 text-sm"
-          placeholder="Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
+          placeholder="First Name"
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
           required
         />
         <input
           className="rounded-xl border border-zinc-300 px-3 py-2 text-sm"
-          placeholder="Address"
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
+          placeholder="Last Name"
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
           required
         />
         <button type="submit" disabled={submitting} className="rounded-xl border border-zinc-300 px-3 py-2 text-sm disabled:opacity-60">
-          {submitting ? "Saving..." : "Add Branch"}
+          {submitting ? "Saving..." : "Add Author"}
         </button>
       </form>
 
@@ -164,47 +165,47 @@ export default function Page() {
         <table className="w-full text-sm">
           <thead className="bg-zinc-50">
             <tr>
-              <th className="px-4 py-2 text-left">Name</th>
-              <th className="px-4 py-2 text-left">Address</th>
+              <th className="px-4 py-2 text-left">First Name</th>
+              <th className="px-4 py-2 text-left">Last Name</th>
               <th className="px-4 py-2 text-left">Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td className="px-4 py-3 text-black/60" colSpan={3}>Loading branches...</td>
+                <td className="px-4 py-3 text-black/60" colSpan={3}>Loading authors...</td>
               </tr>
-            ) : branches.length === 0 ? (
+            ) : authors.length === 0 ? (
               <tr>
-                <td className="px-4 py-3 text-black/60" colSpan={3}>No branches found</td>
+                <td className="px-4 py-3 text-black/60" colSpan={3}>No authors found</td>
               </tr>
             ) : (
-              branches.map((b) => (
-                <tr key={b.branch_id} className="border-t border-zinc-100">
+              authors.map((a) => (
+                <tr key={a.author_id} className="border-t border-zinc-100">
                   <td className="px-4 py-2">
-                    {editingId === b.branch_id ? (
+                    {editingId === a.author_id ? (
                       <input
                         className="w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm"
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
+                        value={editFirst}
+                        onChange={(e) => setEditFirst(e.target.value)}
                       />
                     ) : (
-                      b.branch_name
+                      a.first_name
                     )}
                   </td>
                   <td className="px-4 py-2">
-                    {editingId === b.branch_id ? (
+                    {editingId === a.author_id ? (
                       <input
                         className="w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm"
-                        value={editAddress}
-                        onChange={(e) => setEditAddress(e.target.value)}
+                        value={editLast}
+                        onChange={(e) => setEditLast(e.target.value)}
                       />
                     ) : (
-                      b.branch_address
+                      a.last_name
                     )}
                   </td>
                   <td className="px-4 py-2 space-x-2">
-                    {editingId === b.branch_id ? (
+                    {editingId === a.author_id ? (
                       <>
                         <button
                           onClick={saveEdit}
@@ -213,21 +214,27 @@ export default function Page() {
                         >
                           {savingEdit ? "Saving..." : "Save"}
                         </button>
-                        <button onClick={cancelEdit} className="rounded-xl border border-zinc-300 px-3 py-1 text-sm">
+                        <button
+                          onClick={cancelEdit}
+                          className="rounded-xl border border-zinc-300 px-3 py-1 text-sm"
+                        >
                           Cancel
                         </button>
                       </>
                     ) : (
                       <>
-                        <button onClick={() => startEdit(b)} className="rounded-xl border border-zinc-300 px-3 py-1 text-sm">
+                        <button
+                          onClick={() => startEdit(a)}
+                          className="rounded-xl border border-zinc-300 px-3 py-1 text-sm"
+                        >
                           Edit
                         </button>
                         <button
-                          onClick={() => deleteBranch(b.branch_id)}
-                          disabled={deletingId === b.branch_id}
+                          onClick={() => deleteAuthor(a.author_id)}
+                          disabled={deletingId === a.author_id}
                           className="rounded-xl border border-zinc-300 px-3 py-1 text-sm disabled:opacity-60"
                         >
-                          {deletingId === b.branch_id ? "Deleting..." : "Delete"}
+                          {deletingId === a.author_id ? "Deleting..." : "Delete"}
                         </button>
                       </>
                     )}

@@ -39,7 +39,7 @@ export async function GET(
 
   if (categoryId === null) {
     return NextResponse.json(
-      { success: false, error: "Invalid category id" },
+      { success: false, error: "Invalid category ID" },
       { status: 400 }
     );
   }

@@ -1,44 +1,44 @@
 "use client";
 import { useEffect, useState } from "react";
 
-type Branch = {
-  branch_id: number;
-  branch_name: string;
-  branch_address: string;
+type Category = {
+  category_id: number;
+  category_name: string;
+  category_desc: string | null;
 };
 
 export default function Page() {
-  const [branches, setBranches] = useState<Branch[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [name, setName] = useState("");
-  const [address, setAddress] = useState("");
+  const [desc, setDesc] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
-  const [editAddress, setEditAddress] = useState("");
+  const [editDesc, setEditDesc] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const loadBranches = async () => {
+  const loadCategories = async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/branch");
+      const res = await fetch("/api/category");
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Failed to load branches");
+        throw new Error(data.error || "Failed to load categories");
       }
-      setBranches(data.branches || []);
+      setCategories(data.categories || []);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load branches");
+      setError(e instanceof Error ? e.message : "Failed to load categories");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadBranches();
+    loadCategories();
   }, []);
 
   const submit = async (e: React.FormEvent) => {
@@ -46,42 +46,42 @@ export default function Page() {
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch("/api/branch", {
+      const res = await fetch("/api/category", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          branch_name: name.trim(),
-          branch_address: address.trim(),
+          category_name: name.trim(),
+          category_desc: desc.trim() || null,
         }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Failed to add branch");
+        throw new Error(data.error || "Failed to add category");
       }
-      setBranches((curr) => [
-        { branch_id: data.branch_id, branch_name: name.trim(), branch_address: address.trim() },
+      setCategories((curr) => [
+        { category_id: data.category_id, category_name: name.trim(), category_desc: desc.trim() || null },
         ...curr,
       ]);
       setName("");
-      setAddress("");
+      setDesc("");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to add branch");
+      setError(e instanceof Error ? e.message : "Failed to add category");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const startEdit = (b: Branch) => {
-    setEditingId(b.branch_id);
-    setEditName(b.branch_name);
-    setEditAddress(b.branch_address);
+  const startEdit = (c: Category) => {
+    setEditingId(c.category_id);
+    setEditName(c.category_name);
+    setEditDesc(c.category_desc ?? "");
     setError(null);
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setEditName("");
-    setEditAddress("");
+    setEditDesc("");
   };
 
   const saveEdit = async () => {
@@ -89,46 +89,48 @@ export default function Page() {
     setSavingEdit(true);
     setError(null);
     try {
-      const res = await fetch("/api/branch", {
+      const res = await fetch("/api/category", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          branch_id: editingId,
-          branch_name: editName.trim(),
-          branch_address: editAddress.trim(),
+          category_id: editingId,
+          category_name: editName.trim(),
+          category_desc: editDesc.trim() || null,
         }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Failed to update branch");
+        throw new Error(data.error || "Failed to update category");
       }
-      setBranches((curr) =>
-        curr.map((b) =>
-          b.branch_id === editingId ? { ...b, branch_name: editName.trim(), branch_address: editAddress.trim() } : b
+      setCategories((curr) =>
+        curr.map((c) =>
+          c.category_id === editingId
+            ? { ...c, category_name: editName.trim(), category_desc: editDesc.trim() || null }
+            : c
         )
       );
       cancelEdit();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update branch");
+      setError(e instanceof Error ? e.message : "Failed to update category");
     } finally {
       setSavingEdit(false);
     }
   };
 
-  const deleteBranch = async (id: number) => {
-    if (!confirm("Delete this branch?")) return;
+  const deleteCategory = async (id: number) => {
+    if (!confirm("Delete this category?")) return;
     setDeletingId(id);
     setError(null);
     try {
-      const res = await fetch(`/api/branch/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/category/${id}`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Failed to delete branch");
+        throw new Error(data.error || "Failed to delete category");
       }
-      setBranches((curr) => curr.filter((b) => b.branch_id !== id));
+      setCategories((curr) => curr.filter((c) => c.category_id !== id));
       if (editingId === id) cancelEdit();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete branch");
+      setError(e instanceof Error ? e.message : "Failed to delete category");
     } finally {
       setDeletingId(null);
     }
@@ -136,7 +138,10 @@ export default function Page() {
 
   return (
     <div className="space-y-6">
-      <div className="text-xl font-semibold">Branches</div>
+      <div>
+        <div className="text-xl font-semibold">Categories</div>
+        <div className="text-sm text-black/60">Add, edit, or remove categories</div>
+      </div>
 
       <form onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
         <input
@@ -148,13 +153,12 @@ export default function Page() {
         />
         <input
           className="rounded-xl border border-zinc-300 px-3 py-2 text-sm"
-          placeholder="Address"
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          required
+          placeholder="Description (optional)"
+          value={desc}
+          onChange={(e) => setDesc(e.target.value)}
         />
         <button type="submit" disabled={submitting} className="rounded-xl border border-zinc-300 px-3 py-2 text-sm disabled:opacity-60">
-          {submitting ? "Saving..." : "Add Branch"}
+          {submitting ? "Saving..." : "Add Category"}
         </button>
       </form>
 
@@ -165,46 +169,46 @@ export default function Page() {
           <thead className="bg-zinc-50">
             <tr>
               <th className="px-4 py-2 text-left">Name</th>
-              <th className="px-4 py-2 text-left">Address</th>
+              <th className="px-4 py-2 text-left">Description</th>
               <th className="px-4 py-2 text-left">Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td className="px-4 py-3 text-black/60" colSpan={3}>Loading branches...</td>
+                <td className="px-4 py-3 text-black/60" colSpan={3}>Loading categories...</td>
               </tr>
-            ) : branches.length === 0 ? (
+            ) : categories.length === 0 ? (
               <tr>
-                <td className="px-4 py-3 text-black/60" colSpan={3}>No branches found</td>
+                <td className="px-4 py-3 text-black/60" colSpan={3}>No categories found</td>
               </tr>
             ) : (
-              branches.map((b) => (
-                <tr key={b.branch_id} className="border-t border-zinc-100">
+              categories.map((c) => (
+                <tr key={c.category_id} className="border-t border-zinc-100">
                   <td className="px-4 py-2">
-                    {editingId === b.branch_id ? (
+                    {editingId === c.category_id ? (
                       <input
                         className="w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm"
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
                       />
                     ) : (
-                      b.branch_name
+                      c.category_name
                     )}
                   </td>
                   <td className="px-4 py-2">
-                    {editingId === b.branch_id ? (
+                    {editingId === c.category_id ? (
                       <input
                         className="w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm"
-                        value={editAddress}
-                        onChange={(e) => setEditAddress(e.target.value)}
+                        value={editDesc}
+                        onChange={(e) => setEditDesc(e.target.value)}
                       />
                     ) : (
-                      b.branch_address
+                      c.category_desc || "—"
                     )}
                   </td>
                   <td className="px-4 py-2 space-x-2">
-                    {editingId === b.branch_id ? (
+                    {editingId === c.category_id ? (
                       <>
                         <button
                           onClick={saveEdit}
@@ -219,15 +223,15 @@ export default function Page() {
                       </>
                     ) : (
                       <>
-                        <button onClick={() => startEdit(b)} className="rounded-xl border border-zinc-300 px-3 py-1 text-sm">
+                        <button onClick={() => startEdit(c)} className="rounded-xl border border-zinc-300 px-3 py-1 text-sm">
                           Edit
                         </button>
                         <button
-                          onClick={() => deleteBranch(b.branch_id)}
-                          disabled={deletingId === b.branch_id}
+                          onClick={() => deleteCategory(c.category_id)}
+                          disabled={deletingId === c.category_id}
                           className="rounded-xl border border-zinc-300 px-3 py-1 text-sm disabled:opacity-60"
                         >
-                          {deletingId === b.branch_id ? "Deleting..." : "Delete"}
+                          {deletingId === c.category_id ? "Deleting..." : "Delete"}
                         </button>
                       </>
                     )}

@@ -59,7 +59,7 @@ export async function GET(
       member_status
     FROM activeMembers
     WHERE member_id = ?
-      AND member_status IN ('active', 'suspended')
+      AND member_status IN ('active', 'blacklist')
     LIMIT 1;
   `;
 

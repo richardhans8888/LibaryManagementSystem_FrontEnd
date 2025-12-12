@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 const links = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/books", label: "Books" },
+  { href: "/admin/authors", label: "Authors" },
+  { href: "/admin/categories", label: "Categories" },
   { href: "/admin/members", label: "Members" },
   { href: "/admin/loans", label: "Loans" },
   { href: "/admin/borrow-requests", label: "Borrow Requests" },
@@ -32,4 +34,3 @@ export default function AdminSidebar() {
     </div>
   );
 }
-
