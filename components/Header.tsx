@@ -55,12 +55,11 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-white/90 border-b border-zinc-200 backdrop-blur supports-[backdrop-filter]:bg-white/60">
-      <div className="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="font-serif text-xl font-bold text-black">Library</Link>
-        <nav className="flex items-center gap-6 text-sm">
+    <header className="bg-white/90 border-b border-[#0d2538] backdrop-blur supports-[backdrop-filter]:bg-white/60">
+      <div className="mx-auto max-w-7xl px-6 py-8 flex flex-col items-center gap-3">
+        <Link href="/" className="font-sans text-4xl md:text-5xl font-semibold tracking-wide" style={{ fontFamily: 'var(--font-dm-sans)' }}>Library</Link>
+        <nav className="flex items-center gap-8 text-base">
           <Link href="/books" className="text-black hover:underline">Books</Link>
-          <Link href="/collections" className="text-black hover:underline">Collections</Link>
           <button onClick={goDashboard} className="text-black hover:underline">Dashboard</button>
           {hasSession ? (
             <button onClick={logout} className="text-black hover:underline">Logout</button>

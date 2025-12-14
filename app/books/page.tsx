@@ -81,7 +81,36 @@ export default function Page() {
     router.replace(`/books${sp.toString() ? "?" + sp.toString() : ""}`);
   };
 
-  const latestBooks = useMemo(() => books.slice().sort((a, b) => b.book_id - a.book_id), [books]);
+  const latestBooks = useMemo(() => books.slice().sort((a, b) => b.book_id - a.book_id).slice(0, 8), [books]);
+
+  const displayBooks = useMemo(() => {
+    const desired = 8;
+    const base = latestBooks.slice(0, desired);
+    if (base.length >= desired) return base;
+    const imgs = [
+      "/book_1.jpg",
+      "/Book_2.jpg",
+      "/Book_3.jpg",
+      "/book_4.jpg",
+    ];
+    const result: BookRow[] = [...base];
+    for (let i = 0; result.length < desired; i++) {
+      result.push({
+        book_id: -2000 - i,
+        title: `Featured Book ${i + 1}`,
+        year_published: 0,
+        book_status: "available",
+        is_digital: 0,
+        img_link: imgs[i % imgs.length],
+        author_first: "",
+        author_last: "",
+        category_id: 0,
+        category_name: "",
+        branch_name: "",
+      });
+    }
+    return result;
+  }, [latestBooks]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
@@ -105,24 +134,20 @@ export default function Page() {
 
       {error ? <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">{error}</div> : null}
 
-      <div className="mt-6 grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4">
+      <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-8">
         {loading ? (
           <div className="col-span-full text-sm text-black/60">Loading books...</div>
         ) : latestBooks.length === 0 ? (
           <div className="col-span-full text-sm text-black/60">No books available.</div>
         ) : (
-          latestBooks.map((b) => (
-            <Link href={`/books/${b.book_id}`} key={b.book_id} className="group overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm transition hover:shadow-md">
-              <div className="aspect-[5/3] w-full bg-zinc-100">
-                <img src={b.img_link} alt={b.title} className="h-full w-full object-cover" />
-              </div>
-              <div className="p-3 space-y-1">
-                <div className="text-sm font-semibold">{b.title}</div>
-                <div className="text-xs text-zinc-600">
-                  {b.author_first} {b.author_last}
+          displayBooks.map((b) => (
+            <Link href={`/books/${b.book_id}`} key={b.book_id} className="group">
+              <div className="overflow-hidden rounded-md">
+                <div className="aspect-[4/5] w-full bg-zinc-100">
+                  <img src={b.img_link} alt={b.title} className="h-full w-full object-cover" />
                 </div>
-                <div className="text-[11px] uppercase tracking-wide text-zinc-500">{b.category_name}</div>
               </div>
+              <div className="mt-2 text-xs text-black text-center">{b.title}</div>
             </Link>
           ))
         )}
