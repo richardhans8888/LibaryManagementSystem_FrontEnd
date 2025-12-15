@@ -10,7 +10,6 @@ type BookRow = {
   title: string;
   year_published: number;
   book_status: string;
-  is_digital: 0 | 1;
   img_link: string;
   book_desc?: string | null;
   language?: string | null;
@@ -39,7 +38,6 @@ export default function Page() {
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [branchId, setBranchId] = useState<number | null>(null);
   const [status] = useState<(typeof STATUS_OPTIONS)[number]>("available");
-  const [isDigital, setIsDigital] = useState(false);
   const [year, setYear] = useState("");
   const [imgLink, setImgLink] = useState("");
   const [bookDesc, setBookDesc] = useState("");
@@ -125,7 +123,6 @@ export default function Page() {
         year_published: Number(year),
         branch_id: branchId,
         book_status: "available",
-        is_digital: isDigital ? 1 : 0,
         img_link: imgLink.trim(),
         book_desc: bookDesc.trim() || null,
         language: language.trim() || null,
@@ -146,14 +143,13 @@ export default function Page() {
         {
           book_id: data.book_id,
           title: title.trim(),
-          year_published: Number(year),
-          book_status: "available",
-          is_digital: isDigital ? 1 : 0,
-          img_link: imgLink.trim(),
-          book_desc: bookDesc.trim() || null,
-          language: language.trim() || null,
-          author_id: authorId,
-          author_first: author?.first_name || "",
+        year_published: Number(year),
+        book_status: "available",
+        img_link: imgLink.trim(),
+        book_desc: bookDesc.trim() || null,
+        language: language.trim() || null,
+        author_id: authorId,
+        author_first: author?.first_name || "",
           author_last: author?.last_name || "",
           category_id: categoryId,
           category_name: category?.category_name || "",
@@ -167,7 +163,6 @@ export default function Page() {
       setAuthorId(null);
       setCategoryId(null);
       setBranchId(null);
-      setIsDigital(false);
       setYear("");
       setImgLink("");
       setBookDesc("");
@@ -256,7 +251,6 @@ export default function Page() {
     setEditingId(b.book_id);
     setEditBook({
       ...b,
-      is_digital: b.is_digital,
       book_status: b.book_status,
       author_id: b.author_id,
       category_id: b.category_id,
@@ -283,7 +277,6 @@ export default function Page() {
       year_published: editBook.year_published,
       branch_id: editBook.branch_id,
       book_status: editBook.book_status,
-      is_digital: editBook.is_digital,
       img_link: editBook.img_link?.trim(),
       book_desc: (editBook.book_desc ?? "").toString().trim() || null,
       language: (editBook.language ?? "").toString().trim() || null,
@@ -295,7 +288,6 @@ export default function Page() {
         payload.year_published === undefined ||
         payload.branch_id === undefined ||
         !payload.book_status ||
-        payload.is_digital === undefined ||
         !payload.img_link
       ) {
         throw new Error("Please fill all required fields");
@@ -320,7 +312,6 @@ export default function Page() {
                 title: payload.title!,
                 year_published: Number(payload.year_published),
                 book_status: payload.book_status!,
-                is_digital: payload.is_digital as 0 | 1,
                 img_link: payload.img_link!,
                 book_desc: payload.book_desc ?? null,
                 language: payload.language ?? null,
@@ -401,15 +392,6 @@ export default function Page() {
             disabled={loadingOptions}
           />
 
-          <select
-            className="rounded-xl border border-zinc-300 px-3 py-2 text-sm"
-            value={isDigital ? "digital" : "physical"}
-            onChange={(e) => setIsDigital(e.target.value === "digital")}
-          >
-            <option value="physical">Physical</option>
-            <option value="digital">Digital</option>
-          </select>
-
           <input
             className="rounded-xl border border-zinc-300 px-3 py-2 text-sm"
             placeholder="Year Published"
@@ -461,7 +443,6 @@ export default function Page() {
               <th className="px-4 py-2 text-left">Category</th>
               <th className="px-4 py-2 text-left">Branch</th>
               <th className="px-4 py-2 text-left">Year</th>
-              <th className="px-4 py-2 text-left">Format</th>
               <th className="px-4 py-2 text-left">Status</th>
               <th className="px-4 py-2 text-left">Image</th>
               <th className="px-4 py-2 text-left">Actions</th>
@@ -470,17 +451,17 @@ export default function Page() {
           <tbody>
             {loadingBooks ? (
               <tr>
-                <td className="px-4 py-3 text-black/60" colSpan={9}>Loading books...</td>
+                <td className="px-4 py-3 text-black/60" colSpan={8}>Loading books...</td>
               </tr>
             ) : books.length === 0 ? (
               <tr>
-                <td className="px-4 py-3 text-black/60" colSpan={9}>No books found</td>
+                <td className="px-4 py-3 text-black/60" colSpan={8}>No books found</td>
               </tr>
             ) : (
               books.map((b) =>
                 editingId === b.book_id ? (
                   <tr key={b.book_id} className="border-t border-zinc-100">
-                    <td className="px-4 py-3" colSpan={9}>
+                    <td className="px-4 py-3" colSpan={8}>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         <input
                           className="rounded-xl border border-zinc-300 px-3 py-2 text-sm"
@@ -515,14 +496,6 @@ export default function Page() {
                           onChange={(e) => setEditBook((curr) => ({ ...curr, year_published: Number(e.target.value) }))}
                           placeholder="Year"
                         />
-                        <select
-                          className="rounded-xl border border-zinc-300 px-3 py-2 text-sm"
-                          value={editBook.is_digital ? "digital" : "physical"}
-                          onChange={(e) => setEditBook((curr) => ({ ...curr, is_digital: e.target.value === "digital" ? 1 : 0 }))}
-                        >
-                          <option value="physical">Physical</option>
-                          <option value="digital">Digital</option>
-                        </select>
                         <select
                           className="rounded-xl border border-zinc-300 px-3 py-2 text-sm"
                           value={editBook.book_status ?? b.book_status}
@@ -584,7 +557,6 @@ export default function Page() {
                     <td className="px-4 py-2">{b.category_name}</td>
                     <td className="px-4 py-2">{b.branch_name}</td>
                     <td className="px-4 py-2">{b.year_published}</td>
-                    <td className="px-4 py-2">{b.is_digital ? "Digital" : "Physical"}</td>
                     <td className="px-4 py-2">
                       <span className={statusBadge(b.book_status)}>{capitalize(b.book_status)}</span>
                     </td>

@@ -8,7 +8,6 @@ type BookRow = {
   title: string;
   year_published: number;
   book_status: string;
-  is_digital: 0 | 1;
   img_link: string;
   author_first: string;
   author_last: string;

@@ -8,16 +8,6 @@ const toNumber = (value: unknown) => {
   return Number.isNaN(parsed) ? null : parsed;
 };
 
-const toTinyIntBoolean = (value: unknown): 0 | 1 | null => {
-  if (value === true || value === "true" || value === 1 || value === "1") {
-    return 1;
-  }
-  if (value === false || value === "false" || value === 0 || value === "0") {
-    return 0;
-  }
-  return null;
-};
-
 //
 // ========================================================
 // GET /api/books  → list all books (optional category_id filter)
@@ -36,7 +26,6 @@ export async function GET(req: Request) {
       b.title,
       b.year_published,
       b.book_status,
-      b.is_digital,
       b.img_link,
       b.book_desc,
       b.language,
@@ -64,7 +53,6 @@ export async function GET(req: Request) {
         title: "Sample Book",
         year_published: 2024,
         book_status: "available",
-        is_digital: 0 as 0 | 1,
         img_link: "https://images.unsplash.com/photo-1521587760476-6c12a4b040da?w=800&auto=format&fit=crop",
         author_id: 1,
         author_first: "Unknown",
@@ -79,7 +67,6 @@ export async function GET(req: Request) {
         title: "Digital Collection",
         year_published: 2023,
         book_status: "available",
-        is_digital: 1 as 0 | 1,
         img_link: "https://images.unsplash.com/photo-1495446815901-a7297e633e8d?w=800&auto=format&fit=crop",
         author_id: 2,
         author_first: "Digital",
@@ -116,7 +103,6 @@ export async function POST(req: Request) {
     year_published: rawYearPublished,
     branch_id: rawBranchId,
     book_status: rawStatus,
-    is_digital: rawIsDigital,
     img_link,
     book_desc,
     language,
@@ -127,7 +113,6 @@ export async function POST(req: Request) {
   const year_published = toNumber(rawYearPublished);
   const branch_id = toNumber(rawBranchId);
   const book_status = typeof rawStatus === "string" ? rawStatus.trim() : "";
-  const is_digital = toTinyIntBoolean(rawIsDigital);
 
   if (!title || !book_status || !img_link) {
     return NextResponse.json(
@@ -140,8 +125,7 @@ export async function POST(req: Request) {
     author_id === null ||
     category_id === null ||
     year_published === null ||
-    branch_id === null ||
-    is_digital === null
+    branch_id === null
   ) {
     return NextResponse.json(
       { success: false, error: "Missing required book fields" },
@@ -157,12 +141,11 @@ export async function POST(req: Request) {
       year_published,
       branch_id,
       book_status,
-      is_digital,
       img_link,
       book_desc,
       language
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
   `;
 
   const { rows, error } = await query<ResultSetHeader>(sql, [
@@ -172,7 +155,6 @@ export async function POST(req: Request) {
     year_published,
     branch_id,
     book_status,
-    is_digital,
     img_link,
     book_desc ?? null,
     language ?? null,
@@ -213,7 +195,6 @@ export async function PUT(req: Request) {
     year_published: rawYearPublished,
     branch_id: rawBranchId,
     book_status: rawStatus,
-    is_digital: rawIsDigital,
     img_link,
     book_desc,
     language,
@@ -225,7 +206,6 @@ export async function PUT(req: Request) {
   const year_published = toNumber(rawYearPublished);
   const branch_id = toNumber(rawBranchId);
   const book_status = typeof rawStatus === "string" ? rawStatus.trim() : "";
-  const is_digital = toTinyIntBoolean(rawIsDigital);
 
   if (!title || !book_status || !img_link) {
     return NextResponse.json(
@@ -239,8 +219,7 @@ export async function PUT(req: Request) {
     author_id === null ||
     category_id === null ||
     year_published === null ||
-    branch_id === null ||
-    is_digital === null
+    branch_id === null
   ) {
     return NextResponse.json(
       { success: false, error: "Missing required fields for book update" },
@@ -257,7 +236,6 @@ export async function PUT(req: Request) {
       year_published = ?,
       branch_id = ?,
       book_status = ?,
-      is_digital = ?,
       img_link = ?,
       book_desc = ?,
       language = ?
@@ -271,7 +249,6 @@ export async function PUT(req: Request) {
     year_published,
     branch_id,
     book_status,
-    is_digital,
     img_link,
     book_desc ?? null,
     language ?? null,

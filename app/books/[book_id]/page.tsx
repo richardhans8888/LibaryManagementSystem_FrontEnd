@@ -8,7 +8,6 @@ type BookRow = {
   title: string;
   year_published: number;
   book_status: string;
-  is_digital: 0 | 1;
   img_link: string;
   author_id: number;
   author_first: string;
@@ -66,7 +65,7 @@ export default function Page() {
     return `${base} bg-zinc-200`;
   };
 
-  const borrowDisabled = !book || book.book_status !== "available" || book.is_digital === 1;
+  const borrowDisabled = !book || book.book_status !== "available";
 
   const borrowBook = async () => {
     if (!book) return;
@@ -122,12 +121,6 @@ export default function Page() {
           {borrowErr ? <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-900">{borrowErr}</div> : null}
           <div className="rounded-lg border border-zinc-200 bg-white p-3 text-sm shadow-sm space-y-1">
             <div><span className="font-semibold">Branch:</span> {book.branch_name}</div>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold">Format:</span>
-              <span className="inline-flex items-center rounded-full bg-zinc-100 px-2 py-1 text-xs">
-                {book.is_digital ? "DIGITAL" : "PHYSICAL"}
-              </span>
-            </div>
             <div className="flex items-center gap-2">
               <span className="font-semibold">Status:</span>
               <span className={statusBadge(book.book_status)}>{book.book_status.toUpperCase()}</span>

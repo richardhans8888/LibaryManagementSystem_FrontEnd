@@ -104,7 +104,6 @@ export async function POST(req: Request) {
       b.title,
       b.year_published,
       b.book_status,
-      b.is_digital,
       b.img_link,
       b.author_id,
       b.category_id,
@@ -128,13 +127,6 @@ export async function POST(req: Request) {
     return NextResponse.json(
       { success: false, error: "Book not found or unavailable" },
       { status: 404 }
-    );
-  }
-
-  if (book.is_digital === 1) {
-    return NextResponse.json(
-      { success: false, error: "Digital borrowing will be supported later" },
-      { status: 400 }
     );
   }
 
