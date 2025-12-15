@@ -162,7 +162,7 @@ export async function POST(req: Request) {
       book_desc,
       language
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
   `;
 
   const { rows, error } = await query<ResultSetHeader>(sql, [

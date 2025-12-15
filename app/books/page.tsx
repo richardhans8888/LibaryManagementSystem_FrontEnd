@@ -3,6 +3,12 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
+const toNumber = (value: string | null) => {
+  if (value === null) return null;
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? null : parsed;
+};
+
 type Category = { category_id: number; category_name: string; category_desc: string | null };
 type BookRow = {
   book_id: number;
@@ -27,10 +33,10 @@ export default function Page() {
   const [books, setBooks] = useState<BookRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [categoryId, setCategoryId] = useState<number | null>(paramCategory ? Number(paramCategory) : null);
+  const [categoryId, setCategoryId] = useState<number | null>(toNumber(paramCategory));
 
   useEffect(() => {
-    setCategoryId(paramCategory ? Number(paramCategory) : null);
+    setCategoryId(toNumber(paramCategory));
   }, [paramCategory]);
 
   const loadCategories = async () => {
@@ -73,7 +79,7 @@ export default function Page() {
   };
 
   const onCategoryChange = (val: string) => {
-    const cat = val ? Number(val) : null;
+    const cat = toNumber(val || null);
     setCategoryId(cat);
     const sp = new URLSearchParams(params.toString());
     if (cat) sp.set("category_id", String(cat));
@@ -83,34 +89,7 @@ export default function Page() {
 
   const latestBooks = useMemo(() => books.slice().sort((a, b) => b.book_id - a.book_id).slice(0, 8), [books]);
 
-  const displayBooks = useMemo(() => {
-    const desired = 8;
-    const base = latestBooks.slice(0, desired);
-    if (base.length >= desired) return base;
-    const imgs = [
-      "/book_1.jpg",
-      "/Book_2.jpg",
-      "/Book_3.jpg",
-      "/book_4.jpg",
-    ];
-    const result: BookRow[] = [...base];
-    for (let i = 0; result.length < desired; i++) {
-      result.push({
-        book_id: -2000 - i,
-        title: `Featured Book ${i + 1}`,
-        year_published: 0,
-        book_status: "available",
-        is_digital: 0,
-        img_link: imgs[i % imgs.length],
-        author_first: "",
-        author_last: "",
-        category_id: 0,
-        category_name: "",
-        branch_name: "",
-      });
-    }
-    return result;
-  }, [latestBooks]);
+  const displayBooks = useMemo(() => latestBooks, [latestBooks]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">

@@ -45,55 +45,11 @@ export default function Home() {
     [books]
   );
 
-  const displayDiscover = useMemo(() => {
-    const desired = 8;
-    const base = latestDiscover.slice(0, desired);
-    if (base.length >= desired) return base;
-    const placeholderImages = [
-      "/book_1.jpg",
-      "/Book_2.jpg",
-      "/Book_3.jpg",
-      "/book_4.jpg",
-    ];
-    const placeholderTitles = [
-      "Featured Book 1",
-      "Featured Book 2",
-      "Featured Book 3",
-      "Featured Book 4",
-      "Featured Book 5",
-      "Featured Book 6",
-      "Featured Book 7",
-      "Featured Book 8",
-    ];
-    const result: BookRow[] = [...base];
-    for (let i = 0; result.length < desired; i++) {
-      result.push({
-        book_id: -1000 - i,
-        title: placeholderTitles[i % placeholderTitles.length],
-        year_published: 0,
-        book_status: "available",
-        is_digital: 0,
-        img_link: placeholderImages[i % placeholderImages.length],
-        author_first: "",
-        author_last: "",
-        category_name: "General",
-        branch_name: "",
-      });
-    }
-    return result;
-  }, [latestDiscover]);
+  const displayDiscover = useMemo(() => latestDiscover, [latestDiscover]);
 
   const displayCategories = useMemo(() => {
     const desired = 6;
-    if (categories.length >= desired) return categories.slice(0, desired);
-    const placeholders = ["Programming", "Fiction", "Science", "History", "Art", "Business"];
-    const existing = new Set(categories.map((c) => c.category_name));
-    const result: Category[] = [...categories];
-    for (const name of placeholders) {
-      if (result.length >= desired) break;
-      if (!existing.has(name)) result.push({ category_id: -result.length - 1, category_name: name, category_desc: null });
-    }
-    return result.slice(0, desired);
+    return categories.slice(0, desired);
   }, [categories]);
 
   const gradients = [
@@ -132,17 +88,23 @@ export default function Home() {
             <div className="text-sm text-rose-700">{error}</div>
           ) : (
             <>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 items-start">
-              {displayCategories.map((c, idx) => (
-                <Link key={`${c.category_id}-${c.category_name}`} href={c.category_id > 0 ? `/books?category_id=${c.category_id}` : "/books"} className="group">
-                  <div className={`aspect-square w-full overflow-hidden rounded-md bg-gradient-to-br ${gradients[idx % gradients.length]}`} />
-                  <div className="mt-3 text-base font-medium text-black">{c.category_name}</div>
-                </Link>
-              ))}
-            </div>
-            <div className="mt-6 flex justify-center">
-              <Link href="/books" className="inline-flex items-center rounded-full border border-[#0d2538] px-6 py-2 text-sm font-semibold text-[#0d2538] hover:bg-[#0d2538]/10">SEE MORE…</Link>
-            </div>
+            {displayCategories.length === 0 ? (
+              <div className="text-sm text-black/60">No categories available</div>
+            ) : (
+              <>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 items-start">
+                {displayCategories.map((c, idx) => (
+                  <Link key={`${c.category_id}-${c.category_name}`} href={c.category_id > 0 ? `/books?category_id=${c.category_id}` : "/books"} className="group">
+                    <div className={`aspect-square w-full overflow-hidden rounded-md bg-gradient-to-br ${gradients[idx % gradients.length]}`} />
+                    <div className="mt-3 text-base font-medium text-black">{c.category_name}</div>
+                  </Link>
+                ))}
+              </div>
+              <div className="mt-6 flex justify-center">
+                <Link href="/books" className="inline-flex items-center rounded-full border border-[#0d2538] px-6 py-2 text-sm font-semibold text-[#0d2538] hover:bg-[#0d2538]/10">SEE MORE…</Link>
+              </div>
+              </>
+            )}
             </>
           )}
         </section>

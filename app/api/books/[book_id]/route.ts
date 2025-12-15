@@ -114,11 +114,42 @@ export async function DELETE(
   }
 
   const sql = `
-    DELETE FROM book
+    SELECT COUNT(*) AS borrow_count
+    FROM borrowing
     WHERE book_id = ?;
   `;
 
-  const { rows, error } = await query<ResultSetHeader>(sql, [bookId]);
+  const borrowCheck = await query<{ borrow_count: number }[]>(sql, [bookId]);
+  if (borrowCheck.error) {
+    return NextResponse.json(
+      { success: false, error: borrowCheck.error.message },
+      { status: 500 }
+    );
+  }
+
+  const hasBorrowings =
+    borrowCheck.rows && borrowCheck.rows[0] && borrowCheck.rows[0].borrow_count > 0;
+  if (hasBorrowings) {
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          "This book has borrowing records. Please remove associated borrowings before deleting the book.",
+      },
+      { status: 409 }
+    );
+  }
+
+  // Best-effort cleanup of pickups before deleting the book
+  await query<ResultSetHeader>(`DELETE FROM pickup WHERE book_id = ?;`, [bookId]).catch(() => {});
+
+  const { rows, error } = await query<ResultSetHeader>(
+    `
+    DELETE FROM book
+    WHERE book_id = ?;
+  `,
+    [bookId]
+  );
 
   if (error) {
     return NextResponse.json(
