@@ -123,8 +123,17 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="text-xs text-black/60 text-center">
-            Accounts are created by staff. Need help? Contact support.
+          <div className="text-xs text-black/60 text-center space-y-2">
+            <div>
+              Accounts are created by staff. Need help? Contact support.
+            </div>
+            <button
+              type="button"
+              onClick={() => router.push("/signup")}
+              className="inline-flex items-center justify-center rounded-md border border-zinc-300 px-3 py-1 text-xs font-medium text-black hover:bg-zinc-50"
+            >
+              New here? Create an account
+            </button>
           </div>
         </div>
       </div>

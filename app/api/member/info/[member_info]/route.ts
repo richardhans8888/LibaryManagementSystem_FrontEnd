@@ -7,7 +7,7 @@ interface MemberInfoRow extends RowDataPacket {
   member_name: string;
   membership_start_date: string;
   membership_end_date: string | null;
-  member_status: string;
+  blacklisted_at: string | null;
 }
 
 const extractMemberId = (
@@ -52,14 +52,15 @@ export async function GET(
 
   const sql = `
     SELECT
-      member_id,
-      CONCAT(first_name, ' ', last_name) AS member_name,
-      membership_start_date,
-      membership_end_date,
-      member_status
-    FROM activeMembers
-    WHERE member_id = ?
-      AND member_status IN ('active', 'blacklist')
+      m.member_id,
+      CONCAT(m.first_name, ' ', m.last_name) AS member_name,
+      mm.membership_start_date,
+      mm.membership_end_date,
+      bm.blacklisted_at
+    FROM member m
+    JOIN memberMembership mm ON m.member_id = mm.member_id
+    LEFT JOIN blacklistedMembers bm ON bm.member_id = m.member_id
+    WHERE m.member_id = ?
     LIMIT 1;
   `;
 

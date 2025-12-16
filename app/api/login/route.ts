@@ -7,7 +7,18 @@ type MemberRow = {
   last_name: string;
   email: string;
   password: string;
-  member_status: string;
+  membership_end_date: string | null;
+  blacklisted_at: string | null;
+};
+
+const isExpired = (endDate: string | null) => {
+  if (!endDate) return false;
+  const end = new Date(endDate);
+  const today = new Date();
+  // normalize to date-only
+  end.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+  return end < today;
 };
 
 export async function POST(req: Request) {
@@ -25,9 +36,11 @@ export async function POST(req: Request) {
       m.last_name,
       m.email,
       m.password,
-      mm.member_status
+      mm.membership_end_date,
+      bm.blacklisted_at
     FROM member m
     JOIN memberMembership mm ON m.member_id = mm.member_id
+    LEFT JOIN blacklistedMembers bm ON bm.member_id = m.member_id
     WHERE m.email = ?
     LIMIT 1;
   `;
@@ -43,12 +56,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: "Invalid credentials" }, { status: 401 });
   }
 
+  if (user.blacklisted_at) {
+    return NextResponse.json({ success: false, error: "Account is blacklisted" }, { status: 403 });
+  }
+
+  const expired = isExpired(user.membership_end_date);
+
   const sessionPayload = {
     member_id: user.member_id,
     first_name: user.first_name,
     last_name: user.last_name,
     email: user.email,
-    status: user.member_status,
+    status: expired ? "expired" : "active",
+    membership_end_date: user.membership_end_date,
   };
 
   const encoded = Buffer.from(JSON.stringify(sessionPayload)).toString("base64");

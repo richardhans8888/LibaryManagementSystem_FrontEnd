@@ -6,6 +6,7 @@ const links = [
   { href: "/dashboard/pickup", label: "Pickup" },
   { href: "/dashboard/borrowings", label: "Borrowings" },
   { href: "/dashboard/membership", label: "Membership" },
+  { href: "/dashboard/settings", label: "Settings" },
 ];
 
 export default function Sidebar() {

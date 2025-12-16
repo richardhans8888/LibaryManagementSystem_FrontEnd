@@ -15,12 +15,24 @@ type BookSummary = {
   title: string;
 };
 
+type Staff = {
+  staff_id: number;
+  first_name: string;
+  last_name: string;
+  branch_id: number;
+  branch_name?: string | null;
+};
+
 export default function Page() {
   const [pickups, setPickups] = useState<Pickup[]>([]);
   const [books, setBooks] = useState<Record<number, BookSummary>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actioning, setActioning] = useState<number | null>(null);
+  const [staff, setStaff] = useState<Staff[]>([]);
+  const [staffLoading, setStaffLoading] = useState(false);
+  const [staffSelection, setStaffSelection] = useState<Record<number, number | null>>({});
+  const [staffError, setStaffError] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -60,6 +72,23 @@ export default function Page() {
     return () => clearInterval(id);
   }, []);
 
+  useEffect(() => {
+    const loadStaff = async () => {
+      setStaffLoading(true);
+      try {
+        const res = await fetch("/api/staff");
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.error || "Failed to load staff");
+        setStaff(data.staff || []);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to load staff");
+      } finally {
+        setStaffLoading(false);
+      }
+    };
+    loadStaff();
+  }, []);
+
   const timeLeft = (p: Pickup) => {
     const ms = p.pickup_deadline - Date.now();
     if (ms <= 0) return "Expired";
@@ -84,11 +113,18 @@ export default function Page() {
 
   const pickedUp = async (book_id: number, member_id: number) => {
     setActioning(book_id);
+    setStaffError(null);
+    const selectedStaff = staffSelection[book_id] ?? null;
+    if (selectedStaff === null || Number.isNaN(selectedStaff)) {
+      setStaffError("Select a staff member to confirm pickup");
+      setActioning(null);
+      return;
+    }
     try {
       await fetch("/api/borrow", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ book_id, member_id }),
+        body: JSON.stringify({ book_id, member_id, staff_id: selectedStaff }),
       });
       load();
     } finally {
@@ -106,6 +142,7 @@ export default function Page() {
             <tr>
               <th className="px-4 py-2 text-left">Book</th>
               <th className="px-4 py-2 text-left">Member</th>
+              <th className="px-4 py-2 text-left">Staff</th>
               <th className="px-4 py-2 text-left">Time left</th>
               <th className="px-4 py-2 text-left">Actions</th>
             </tr>
@@ -124,6 +161,26 @@ export default function Page() {
                 <tr key={p.id} className="border-t border-zinc-100">
                   <td className="px-4 py-2">{books[p.book_id]?.title || `Book #${p.book_id}`}</td>
                   <td className="px-4 py-2">Member #{p.member_id}</td>
+                  <td className="px-4 py-2">
+                    <select
+                      className="rounded-lg border border-zinc-300 px-2 py-1 text-sm"
+                      value={staffSelection[p.book_id] ?? ""}
+                      onChange={(e) =>
+                        setStaffSelection((curr) => ({
+                          ...curr,
+                          [p.book_id]: e.target.value ? Number(e.target.value) : null,
+                        }))
+                      }
+                      disabled={staffLoading}
+                    >
+                      <option value="">Staff assistant</option>
+                      {staff.map((s) => (
+                        <option key={s.staff_id} value={s.staff_id}>
+                          {s.first_name} {s.last_name}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
                   <td className="px-4 py-2">{timeLeft(p)}</td>
                   <td className="px-4 py-2 space-x-2">
                     <button
@@ -146,6 +203,7 @@ export default function Page() {
             )}
           </tbody>
         </table>
+        {staffError ? <div className="border-t border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">{staffError}</div> : null}
       </div>
     </div>
   );

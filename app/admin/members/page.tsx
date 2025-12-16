@@ -11,34 +11,39 @@ type Member = {
   password: string | null;
   membership_start_date: string;
   membership_end_date: string | null;
-  member_status: string;
+  blacklisted_at: string | null;
 };
-
-const STATUS_OPTIONS = ["active", "expired", "blacklist"] as const;
 
 export default function Page() {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [address, setAddress] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [status] = useState<(typeof STATUS_OPTIONS)[number]>("active");
-
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editMember, setEditMember] = useState<Partial<Member>>({});
+  const [action, setAction] = useState<"blacklist" | "reactivate" | null>(null);
+  const [reason, setReason] = useState("");
 
-  const sortedMembers = useMemo(
-    () => [...members].sort((a, b) => a.last_name.localeCompare(b.last_name)),
+  const today = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
+
+  const derivedStatus = (m: Member) => {
+    if (!m.membership_end_date) return "active";
+    const end = new Date(m.membership_end_date);
+    end.setHours(0, 0, 0, 0);
+    return end >= today ? "active" : "expired";
+  };
+
+  const verifiedMembers = useMemo(
+    () => [...members].filter((m) => !m.blacklisted_at).sort((a, b) => a.last_name.localeCompare(b.last_name)),
+    [members]
+  );
+  const blacklistedMembers = useMemo(
+    () => [...members].filter((m) => m.blacklisted_at).sort((a, b) => a.last_name.localeCompare(b.last_name)),
     [members]
   );
 
@@ -61,98 +66,32 @@ export default function Page() {
     loadMembers();
   }, []);
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setError(null);
-    try {
-      if (!firstName.trim() || !lastName.trim() || !startDate || !status) {
-        throw new Error("First name, last name, start date, and status are required");
-      }
-      if (!password.trim()) {
-        throw new Error("Password is required");
-      }
-      const res = await fetch("/api/member", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          first_name: firstName.trim(),
-          last_name: lastName.trim(),
-          address: address.trim() || null,
-          phone_number: phone.trim() || null,
-          email: email.trim() || null,
-          password: password.trim(),
-          membership_start_date: startDate,
-          membership_end_date: endDate.trim() || null,
-          member_status: status,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error || "Failed to add member");
-
-      setMembers((curr) => [
-        {
-          member_id: data.member_id,
-          first_name: firstName.trim(),
-          last_name: lastName.trim(),
-          address: address.trim() || null,
-          phone_number: phone.trim() || null,
-          email: email.trim() || null,
-          password: null,
-          membership_start_date: startDate,
-          membership_end_date: endDate.trim() || null,
-          member_status: status,
-        },
-        ...curr,
-      ]);
-
-      setFirstName("");
-      setLastName("");
-      setAddress("");
-      setPhone("");
-      setEmail("");
-      setPassword("");
-      setStartDate("");
-      setEndDate("");
-      // status remains default active on creation
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to add member");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const startEdit = (m: Member) => {
     setEditingId(m.member_id);
-    setEditMember({ ...m, password: "" });
+    setAction(m.blacklisted_at ? "reactivate" : "blacklist");
+    setReason("");
     setError(null);
   };
 
   const cancelEdit = () => {
     setEditingId(null);
-    setEditMember({});
+    setAction(null);
+    setReason("");
   };
 
   const saveEdit = async () => {
-    if (editingId === null) return;
+    if (editingId === null || !action) return;
+    if (action === "blacklist" && !reason.trim()) {
+      setError("Reason is required to blacklist a member");
+      return;
+    }
     setSavingEdit(true);
     setError(null);
     try {
-      const payload = {
-        first_name: editMember.first_name?.trim(),
-        last_name: editMember.last_name?.trim(),
-        address: (editMember.address ?? "").toString().trim() || null,
-        phone_number: (editMember.phone_number ?? "").toString().trim() || null,
-        email: (editMember.email ?? "").toString().trim() || null,
-        password: (editMember.password ?? "").toString().trim() || null,
-        membership_start_date: editMember.membership_start_date,
-        membership_end_date: editMember.membership_end_date?.toString().trim() || null,
-        member_status: editMember.member_status,
-      };
       const res = await fetch(`/api/member/${editingId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ action, reason: reason.trim() || null }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || "Failed to update member");
@@ -160,17 +99,7 @@ export default function Page() {
       setMembers((curr) =>
         curr.map((m) =>
           m.member_id === editingId
-            ? {
-                ...m,
-                first_name: payload.first_name ?? m.first_name,
-                last_name: payload.last_name ?? m.last_name,
-                phone_number: payload.phone_number !== undefined ? payload.phone_number : m.phone_number,
-                email: payload.email !== undefined ? payload.email : m.email,
-                address: payload.address !== undefined ? payload.address : m.address,
-                membership_start_date: payload.membership_start_date ?? m.membership_start_date,
-                membership_end_date: payload.membership_end_date ?? m.membership_end_date,
-                member_status: payload.member_status ?? m.member_status,
-              }
+            ? { ...m, blacklisted_at: action === "blacklist" ? new Date().toISOString() : null }
             : m
         )
       );
@@ -203,86 +132,8 @@ export default function Page() {
     <div className="space-y-6">
       <div>
         <div className="text-xl font-semibold">Members</div>
+        <div className="text-sm text-black/60">Self-signup manages profile data. Admins can only blacklist/reactivate accounts.</div>
       </div>
-
-      <form onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-        <input
-          className="rounded-xl border border-zinc-300 px-3 py-2 text-sm"
-          placeholder="First Name"
-          value={firstName}
-          onChange={(e) => setFirstName(e.target.value)}
-          required
-        />
-        <input
-          className="rounded-xl border border-zinc-300 px-3 py-2 text-sm"
-          placeholder="Last Name"
-          value={lastName}
-          onChange={(e) => setLastName(e.target.value)}
-          required
-        />
-        <input
-          type="tel"
-          className="rounded-xl border border-zinc-300 px-3 py-2 text-sm"
-          placeholder="Phone"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-        />
-        <input
-          type="email"
-          className="rounded-xl border border-zinc-300 px-3 py-2 text-sm"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <input
-          type="password"
-          className="rounded-xl border border-zinc-300 px-3 py-2 text-sm"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-        <input
-          className="rounded-xl border border-zinc-300 px-3 py-2 text-sm sm:col-span-2"
-          placeholder="Address"
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-        />
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:col-span-2 lg:col-span-3">
-          <div>
-            <div className="text-xs mb-1">Membership Start Date</div>
-            <input
-              type="date"
-              className="w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              required
-            />
-          </div>
-          <div>
-            <div className="text-xs mb-1">Membership End Date</div>
-            <input
-              type="date"
-              className="w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
-          </div>
-        </div>
-        <div>
-          <div className="text-xs mb-1">Status</div>
-          <input
-            className="w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm bg-zinc-50"
-            value="Active"
-            readOnly
-          />
-        </div>
-        <div className="sm:col-span-2 lg:col-span-3 flex flex-wrap gap-3">
-          <button type="submit" disabled={submitting} className="rounded-xl border border-zinc-300 px-4 py-2 text-sm disabled:opacity-60 w-fit">
-            {submitting ? "Saving..." : "Add Member"}
-          </button>
-        </div>
-      </form>
 
       {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">{error}</div> : null}
 
@@ -305,90 +156,32 @@ export default function Page() {
               <tr>
                 <td className="px-4 py-3 text-black/60" colSpan={8}>Loading members...</td>
               </tr>
-            ) : sortedMembers.length === 0 ? (
+            ) : verifiedMembers.length === 0 ? (
               <tr>
                 <td className="px-4 py-3 text-black/60" colSpan={8}>No members found</td>
               </tr>
             ) : (
-              sortedMembers.map((m) =>
+              verifiedMembers.map((m) =>
                 editingId === m.member_id ? (
                   <tr key={m.member_id} className="border-t border-zinc-100">
                     <td className="px-4 py-3" colSpan={8}>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        <div className="grid grid-cols-2 gap-2">
-                          <input
-                            className="rounded-xl border border-zinc-300 px-3 py-2 text-sm"
-                            value={editMember.first_name ?? ""}
-                            onChange={(e) => setEditMember((curr) => ({ ...curr, first_name: e.target.value }))}
-                          />
-                          <input
-                            className="rounded-xl border border-zinc-300 px-3 py-2 text-sm"
-                            value={editMember.last_name ?? ""}
-                            onChange={(e) => setEditMember((curr) => ({ ...curr, last_name: e.target.value }))}
-                          />
+                        <div className="lg:col-span-3 text-sm text-black/60">
+                          Provide a reason to blacklist this member.
                         </div>
-                      <input
-                        className="rounded-xl border border-zinc-300 px-3 py-2 text-sm"
-                        value={editMember.email ?? ""}
-                        onChange={(e) => setEditMember((curr) => ({ ...curr, email: e.target.value }))}
-                        placeholder="Email"
-                      />
-                      <input
-                        type="password"
-                        className="rounded-xl border border-zinc-300 px-3 py-2 text-sm"
-                        value={editMember.password ?? ""}
-                        onChange={(e) => setEditMember((curr) => ({ ...curr, password: e.target.value }))}
-                        placeholder="New password (optional)"
-                      />
-                        <input
-                          className="rounded-xl border border-zinc-300 px-3 py-2 text-sm"
-                          value={editMember.phone_number ?? ""}
-                          onChange={(e) => setEditMember((curr) => ({ ...curr, phone_number: e.target.value }))}
-                          placeholder="Phone"
-                        />
-                        <input
-                          className="rounded-xl border border-zinc-300 px-3 py-2 text-sm lg:col-span-2"
-                          value={editMember.address ?? ""}
-                          onChange={(e) => setEditMember((curr) => ({ ...curr, address: e.target.value }))}
-                          placeholder="Address"
-                        />
-                        <div>
-                          <div className="text-xs mb-1">Start</div>
-                          <input
-                            type="date"
+                        <div className="lg:col-span-3">
+                          <textarea
                             className="w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm"
-                            value={editMember.membership_start_date ?? ""}
-                            onChange={(e) => setEditMember((curr) => ({ ...curr, membership_start_date: e.target.value }))}
+                            placeholder="Reason for blacklisting"
+                            value={reason}
+                            onChange={(e) => setReason(e.target.value)}
                           />
-                        </div>
-                        <div>
-                          <div className="text-xs mb-1">End</div>
-                          <input
-                            type="date"
-                            className="w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm"
-                            value={editMember.membership_end_date ?? ""}
-                            onChange={(e) => setEditMember((curr) => ({ ...curr, membership_end_date: e.target.value }))}
-                          />
-                        </div>
-                        <div>
-                          <div className="text-xs mb-1">Status</div>
-                          <select
-                            className="w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm"
-                            value={editMember.member_status ?? m.member_status}
-                            onChange={(e) => setEditMember((curr) => ({ ...curr, member_status: e.target.value }))}
-                          >
-                            {STATUS_OPTIONS.map((s) => (
-                              <option key={s} value={s}>
-                                {s.charAt(0).toUpperCase() + s.slice(1)}
-                              </option>
-                            ))}
-                          </select>
                         </div>
                       </div>
                       <div className="mt-4 flex flex-wrap gap-3">
                         <button
                           onClick={saveEdit}
-                          disabled={savingEdit}
+                          disabled={savingEdit || !reason.trim()}
                           className="rounded-xl border border-zinc-300 px-4 py-2 text-sm disabled:opacity-60"
                         >
                           {savingEdit ? "Saving..." : "Save"}
@@ -416,19 +209,15 @@ export default function Page() {
                     <td className="px-4 py-2">{m.membership_end_date?.slice(0, 10) || "—"}</td>
                     <td className="px-4 py-2">
                       <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs ${
-                        m.member_status === "active"
-                          ? "bg-green-100"
-                          : m.member_status === "blacklist"
-                            ? "bg-rose-100"
-                            : "bg-zinc-200"
+                        derivedStatus(m) === "active" ? "bg-green-100" : "bg-amber-100"
                       }`}>
-                        {m.member_status.charAt(0).toUpperCase() + m.member_status.slice(1)}
+                        {derivedStatus(m).charAt(0).toUpperCase() + derivedStatus(m).slice(1)}
                       </span>
                     </td>
                     <td className="px-4 py-2">
                       <div className="flex flex-wrap gap-2">
                         <button onClick={() => startEdit(m)} className="rounded-xl border border-zinc-300 px-3 py-1 text-sm">
-                          Edit
+                          Blacklist
                         </button>
                         <button
                           onClick={() => deleteMember(m.member_id)}
@@ -445,6 +234,69 @@ export default function Page() {
             )}
           </tbody>
         </table>
+      </div>
+
+      <div className="space-y-3">
+        <div className="text-lg font-semibold">Blacklisted Members</div>
+        <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-zinc-50">
+              <tr>
+                <th className="px-4 py-2 text-left">Name</th>
+                <th className="px-4 py-2 text-left">Email</th>
+                <th className="px-4 py-2 text-left">Blacklisted At</th>
+                <th className="px-4 py-2 text-left">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td className="px-4 py-3 text-black/60" colSpan={4}>Loading...</td>
+                </tr>
+              ) : blacklistedMembers.length === 0 ? (
+                <tr>
+                  <td className="px-4 py-3 text-black/60" colSpan={4}>No blacklisted members</td>
+                </tr>
+              ) : (
+                blacklistedMembers.map((m) =>
+                  editingId === m.member_id ? (
+                    <tr key={m.member_id} className="border-t border-zinc-100">
+                      <td className="px-4 py-3" colSpan={4}>
+                        <div className="text-sm text-black/70 mb-3">Reactivate this member?</div>
+                        <div className="flex flex-wrap gap-3">
+                          <button
+                            onClick={saveEdit}
+                            disabled={savingEdit}
+                            className="rounded-xl border border-zinc-300 px-4 py-2 text-sm disabled:opacity-60"
+                          >
+                            {savingEdit ? "Saving..." : "Reactivate"}
+                          </button>
+                          <button onClick={cancelEdit} className="rounded-xl border border-zinc-300 px-4 py-2 text-sm">
+                            Cancel
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    <tr key={m.member_id} className="border-t border-zinc-100">
+                      <td className="px-4 py-2">{`${m.first_name} ${m.last_name}`}</td>
+                      <td className="px-4 py-2">{m.email || "—"}</td>
+                      <td className="px-4 py-2">{m.blacklisted_at?.slice(0, 10) || "—"}</td>
+                      <td className="px-4 py-2">
+                        <button
+                          onClick={() => { setEditingId(m.member_id); setAction("reactivate"); setReason(""); }}
+                          className="rounded-xl border border-zinc-300 px-3 py-1 text-sm"
+                        >
+                          Reactivate
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                )
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

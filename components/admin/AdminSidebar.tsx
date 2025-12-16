@@ -9,7 +9,10 @@ const links = [
   { href: "/admin/pickup", label: "Pickup" },
   { href: "/admin/borrowings", label: "Borrowings" },
   { href: "/admin/members", label: "Members" },
+  { href: "/admin/staff", label: "Staff" },
   { href: "/admin/branches", label: "Branches" },
+  { href: "/admin/packages", label: "Packages" },
+  { href: "/admin/payments", label: "Payments" },
 ];
 
 export default function AdminSidebar() {

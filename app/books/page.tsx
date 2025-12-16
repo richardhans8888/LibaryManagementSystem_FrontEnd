@@ -16,11 +16,10 @@ type BookRow = {
   year_published: number;
   book_status: string;
   img_link: string;
-  author_first: string;
-  author_last: string;
   category_id: number;
   category_name: string;
   branch_name: string;
+  authors: { author_id: number; first_name: string; last_name: string }[];
 };
 
 export default function Page() {
@@ -125,7 +124,10 @@ export default function Page() {
                   <img src={b.img_link} alt={b.title} className="h-full w-full object-cover" />
                 </div>
               </div>
-              <div className="mt-2 text-xs text-black text-center">{b.title}</div>
+              <div className="mt-2 text-xs text-black text-center">
+                {b.title}
+                <div className="text-[11px] italic text-black/70">{b.branch_name}</div>
+              </div>
             </Link>
           ))
         )}

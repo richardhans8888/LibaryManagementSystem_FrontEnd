@@ -11,6 +11,9 @@ type BorrowingRow = RowDataPacket & {
   return_date: string | null;
   title: string;
   member_name: string;
+  staff_id: number | null;
+  staff_name: string | null;
+  staff_branch: string | null;
 };
 
 export async function GET(req: Request) {
@@ -32,10 +35,15 @@ export async function GET(req: Request) {
       br.due_date,
       br.return_date,
       b.title,
-      CONCAT(m.first_name, ' ', m.last_name) AS member_name
+      CONCAT(m.first_name, ' ', m.last_name) AS member_name,
+      br.staff_id,
+      CASE WHEN s.staff_id IS NULL THEN NULL ELSE CONCAT(s.first_name, ' ', s.last_name) END AS staff_name,
+      sb.branch_name AS staff_branch
     FROM borrowing br
     JOIN book b ON br.book_id = b.book_id
     JOIN member m ON br.member_id = m.member_id
+    LEFT JOIN staff s ON br.staff_id = s.staff_id
+    LEFT JOIN branch sb ON s.branch_id = sb.branch_id
     ${where}
     ORDER BY br.borrowed_at DESC;
   `;
@@ -47,14 +55,17 @@ export async function GET(req: Request) {
       {
         borrowing_id: 1,
         book_id: 1,
-        member_id: 1,
-        borrowed_at: new Date().toISOString(),
-        due_date: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString(),
-        return_date: null,
-        title: "Sample Book",
-        member_name: "Member One",
-      } as BorrowingRow,
-    ];
+      member_id: 1,
+      borrowed_at: new Date().toISOString(),
+      due_date: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString(),
+      return_date: null,
+      title: "Sample Book",
+      member_name: "Member One",
+      staff_id: null,
+      staff_name: null,
+      staff_branch: null,
+    } as BorrowingRow,
+  ];
     return NextResponse.json(
       { success: true, borrowings: fallback, warning: "Using fallback borrowings due to database timeout" },
       { status: 200 }

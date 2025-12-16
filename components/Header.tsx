@@ -16,6 +16,10 @@ export default function Header() {
     router.replace(`${pathname}?${sp.toString()}`);
   };
 
+  const goSignup = () => {
+    router.push("/signup");
+  };
+
   const parseCookies = () => {
     if (typeof document === "undefined") return { dest: null as "/admin" | "/dashboard" | null, session: false };
     const cookies = document.cookie.split(";").reduce<Record<string, string>>((acc, c) => {
@@ -64,7 +68,11 @@ export default function Header() {
           {hasSession ? (
             <button onClick={logout} className="text-black hover:underline">Logout</button>
           ) : (
-            <button onClick={openLogin} className="text-black hover:underline">Login</button>
+            <div className="flex items-center gap-4">
+              <button onClick={openLogin} className="text-black hover:underline">Login</button>
+              <span className="text-black/30">•</span>
+              <button onClick={goSignup} className="text-black hover:underline">Sign Up</button>
+            </div>
           )}
         </nav>
       </div>

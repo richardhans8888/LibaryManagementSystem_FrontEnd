@@ -11,6 +11,9 @@ type Borrowing = {
   return_date: string | null;
   title: string;
   member_name: string;
+  staff_id: number | null;
+  staff_name: string | null;
+  staff_branch: string | null;
 };
 
 export default function Page() {
@@ -92,6 +95,7 @@ export default function Page() {
             <tr>
               <th className="px-4 py-2 text-left">Book</th>
               <th className="px-4 py-2 text-left">Member</th>
+              <th className="px-4 py-2 text-left">Staff</th>
               <th className="px-4 py-2 text-left">Borrowed</th>
               <th className="px-4 py-2 text-left">Due</th>
               <th className="px-4 py-2 text-left">Returned</th>
@@ -102,17 +106,23 @@ export default function Page() {
           <tbody>
             {loading ? (
               <tr>
-                <td className="px-4 py-3 text-black/60" colSpan={view === "active" ? 7 : 6}>Loading...</td>
+                <td className="px-4 py-3 text-black/60" colSpan={view === "active" ? 8 : 7}>Loading...</td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td className="px-4 py-3 text-black/60" colSpan={view === "active" ? 7 : 6}>No records</td>
+                <td className="px-4 py-3 text-black/60" colSpan={view === "active" ? 8 : 7}>No records</td>
               </tr>
             ) : (
               rows.map((r) => (
                 <tr key={r.borrowing_id} className="border-t border-zinc-100">
                   <td className="px-4 py-2">{r.title}</td>
                   <td className="px-4 py-2">{r.member_name || `Member #${r.member_id}`}</td>
+                  <td className="px-4 py-2">
+                    <div className="text-sm text-black/80">
+                      {r.staff_name || "—"}
+                      {r.staff_branch ? <div className="text-[11px] text-black/60">{r.staff_branch}</div> : null}
+                    </div>
+                  </td>
                   <td className="px-4 py-2">{new Date(r.borrowed_at).toLocaleString()}</td>
                   <td className="px-4 py-2">{new Date(r.due_date).toLocaleString()}</td>
                   <td className="px-4 py-2">{r.return_date ? new Date(r.return_date).toLocaleString() : "—"}</td>

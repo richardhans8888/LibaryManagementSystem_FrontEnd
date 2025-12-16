@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { query } from "@/lib/sql";
 import type { ResultSetHeader } from "mysql2";
-import type { BookRow } from "@/types/db";
 
 type Pickup = {
   id: number;
@@ -33,6 +32,37 @@ async function resolveMemberId(bodyMemberId?: number | null) {
   if (member?.member_id) return member.member_id;
   if (bodyMemberId && !Number.isNaN(bodyMemberId)) return bodyMemberId;
   return null;
+}
+
+async function requireActiveMember(member_id: number) {
+  const { rows, error } = await query<ResultSetHeader>(
+    `
+    SELECT mm.membership_end_date, bm.member_id AS blacklisted
+    FROM memberMembership mm
+    LEFT JOIN blacklistedMembers bm ON bm.member_id = mm.member_id
+    WHERE mm.member_id = ?
+    LIMIT 1;
+    `,
+    [member_id]
+  );
+  if (error || !rows || (rows as any[]).length === 0) {
+    throw new Error("Failed to verify membership status");
+  }
+  const end = (rows as any[])[0].membership_end_date as string | null;
+  const blacklisted = (rows as any[])[0].blacklisted as number | null;
+  if (blacklisted) {
+    throw new Error("Account is blacklisted");
+  }
+  if (end) {
+    const endDate = new Date(end);
+    endDate.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (endDate < today) {
+      throw new Error("Membership expired");
+    }
+  }
+  return true;
 }
 
 async function cleanupExpired() {
@@ -97,6 +127,14 @@ export async function POST(req: Request) {
       { status: 400 }
     );
   }
+  try {
+    await requireActiveMember(member_id);
+  } catch (e) {
+    return NextResponse.json(
+      { success: false, error: e instanceof Error ? e.message : "Membership issue" },
+      { status: 403 }
+    );
+  }
 
   const bookSql = `
     SELECT 
@@ -105,22 +143,20 @@ export async function POST(req: Request) {
       b.year_published,
       b.book_status,
       b.img_link,
-      b.author_id,
+      b.book_desc,
+      b.language,
       b.category_id,
       b.branch_id,
-      a.first_name AS author_first,
-      a.last_name AS author_last,
       c.category_name,
       br.branch_name
     FROM book b
-    JOIN author a ON b.author_id = a.author_id
     JOIN category c ON b.category_id = c.category_id
     JOIN branch br ON b.branch_id = br.branch_id
     WHERE b.book_id = ?
     LIMIT 1;
   `;
 
-  const { rows: bookRows } = await query<BookRow[]>(bookSql, [book_id]);
+  const { rows: bookRows } = await query<any[]>(bookSql, [book_id]);
   const book = bookRows?.[0];
 
   if (!book) {
@@ -197,6 +233,14 @@ export async function DELETE(req: Request) {
       { status: 401 }
     );
   }
+  try {
+    await requireActiveMember(member_id);
+  } catch (e) {
+    return NextResponse.json(
+      { success: false, error: e instanceof Error ? e.message : "Membership issue" },
+      { status: 403 }
+    );
+  }
   if (!book_id || Number.isNaN(book_id)) {
     return NextResponse.json(
       { success: false, error: "Invalid book_id" },
@@ -228,6 +272,7 @@ export async function PUT(req: Request) {
   const body = await req.json();
   const rawBookId = body.book_id;
   const book_id = Number(rawBookId);
+  const staff_id = body.staff_id !== undefined && body.staff_id !== null ? Number(body.staff_id) : null;
   const member_id = await resolveMemberId(body.member_id);
 
   if (!member_id) {
@@ -239,6 +284,12 @@ export async function PUT(req: Request) {
   if (!book_id || Number.isNaN(book_id)) {
     return NextResponse.json(
       { success: false, error: "Invalid book_id" },
+      { status: 400 }
+    );
+  }
+  if (staff_id === null || Number.isNaN(staff_id)) {
+    return NextResponse.json(
+      { success: false, error: "staff_id is required to confirm pickup" },
       { status: 400 }
     );
   }
@@ -265,10 +316,10 @@ export async function PUT(req: Request) {
   // insert into borrowings table
   await query<ResultSetHeader>(
     `
-    INSERT INTO borrowing (book_id, member_id, borrowed_at, due_date)
-    VALUES (?, ?, NOW(), DATE_ADD(NOW(), INTERVAL 7 DAY));
+    INSERT INTO borrowing (book_id, member_id, borrowed_at, due_date, staff_id)
+    VALUES (?, ?, NOW(), DATE_ADD(NOW(), INTERVAL 7 DAY), ?);
     `,
-    [book_id, member_id]
+    [book_id, member_id, staff_id]
   ).catch(() => {});
 
   // ensure book remains marked borrowed

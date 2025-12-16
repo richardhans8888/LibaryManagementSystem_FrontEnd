@@ -9,15 +9,18 @@ export interface BookRow extends RowDataPacket {
   book_desc?: string | null;
   language?: string | null;
 
-  author_id: number;
-  author_first: string;
-  author_last: string;
-
   category_id: number;
   category_name: string;
 
   branch_id: number;
   branch_name: string;
+}
+
+export interface BookAuthorRow extends RowDataPacket {
+  book_id: number;
+  author_id: number;
+  first_name: string;
+  last_name: string;
 }
 
 export interface AuthorRow extends RowDataPacket {
@@ -39,6 +42,7 @@ export interface CategoryRow extends RowDataPacket {
 }
 
 export interface MemberRow extends RowDataPacket {
+  membership_id?: number;
   member_id: number;
   first_name: string;
   last_name: string;
@@ -48,5 +52,21 @@ export interface MemberRow extends RowDataPacket {
    password: string | null;
   membership_start_date: string;
   membership_end_date: string | null;
-  member_status: string;
+  blacklisted_at?: string | null;
+}
+
+export interface StaffRow extends RowDataPacket {
+  staff_id: number;
+  first_name: string;
+  last_name: string;
+  staff_role: string;
+  phone_number: string | null;
+  email: string | null;
+  branch_id: number;
+  branch_name: string | null;
+}
+
+export interface PackageFeeRow extends RowDataPacket {
+  total_month: number;
+  total_cost: number;
 }

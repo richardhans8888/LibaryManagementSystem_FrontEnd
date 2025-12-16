@@ -3,8 +3,6 @@ import { NextResponse } from "next/server";
 import type { MemberRow } from "@/types/db";
 import type { ResultSetHeader } from "mysql2";
 
-const allowedStatuses = new Set(["active", "expired", "blacklist"]);
-
 //
 // ========================================================
 // GET /api/member → list active and blacklist members
@@ -12,6 +10,7 @@ const allowedStatuses = new Set(["active", "expired", "blacklist"]);
 export async function GET() {
   const sql = `
     SELECT
+      mm.membership_id,
       m.member_id,
       m.first_name,
       m.last_name,
@@ -21,11 +20,11 @@ export async function GET() {
       m.password,
       mm.membership_start_date,
       mm.membership_end_date,
-      mm.member_status
+      bm.blacklisted_at
     FROM member m
     JOIN memberMembership mm ON m.member_id = mm.member_id
-    WHERE mm.member_status IN ('active', 'blacklist')
-    ORDER BY mm.member_status DESC, m.last_name;
+    LEFT JOIN blacklistedMembers bm ON bm.member_id = m.member_id
+    ORDER BY m.last_name;
   `;
 
   const { rows, error } = await query<MemberRow[]>(sql);
@@ -49,7 +48,7 @@ export async function GET() {
 
 //
 // ========================================================
-// POST /api/member → add a member (member + membership row)
+// POST /api/member → add a member (member + membership row) - legacy admin support
 // ========================================================
 export async function POST(req: Request) {
   const body = await req.json();
@@ -62,19 +61,11 @@ export async function POST(req: Request) {
     password,
     membership_start_date,
     membership_end_date,
-    member_status,
   } = body;
 
-  if (!first_name || !last_name || !membership_start_date || !member_status || !password) {
+  if (!first_name || !last_name || !membership_start_date || !password) {
     return NextResponse.json(
       { success: false, error: "Missing required member fields" },
-      { status: 400 }
-    );
-  }
-
-  if (!allowedStatuses.has(member_status)) {
-    return NextResponse.json(
-      { success: false, error: "Invalid member status" },
       { status: 400 }
     );
   }
@@ -120,17 +111,15 @@ export async function POST(req: Request) {
     INSERT INTO memberMembership (
       member_id,
       membership_start_date,
-      membership_end_date,
-      member_status
+      membership_end_date
     )
-    VALUES (?, ?, ?, ?);
+    VALUES (?, ?, ?);
   `;
 
   const { rows: membershipRows, error: membershipError } = await query<ResultSetHeader>(insertMembershipSql, [
     member_id,
     membership_start_date,
     membership_end_date ?? null,
-    member_status,
   ]);
 
   if (membershipError) {

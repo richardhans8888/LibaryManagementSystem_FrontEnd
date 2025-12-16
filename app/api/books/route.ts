@@ -1,7 +1,7 @@
 import { query } from "@/lib/sql";
 import { NextResponse } from "next/server";
-import type { ResultSetHeader } from "mysql2";
-import type { BookRow } from "@/types/db";
+import type { ResultSetHeader, RowDataPacket } from "mysql2";
+import type { BookRow, BookAuthorRow } from "@/types/db";
 
 const toNumber = (value: unknown) => {
   const parsed = Number(value);
@@ -16,9 +16,20 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const categoryParam = url.searchParams.get("category_id");
   const category_id = categoryParam !== null ? toNumber(categoryParam) : null;
+  const authorParam = url.searchParams.get("author_id");
+  const author_id = authorParam !== null ? toNumber(authorParam) : null;
 
-  const where = category_id !== null ? "WHERE b.category_id = ?" : "";
-  const params = category_id !== null ? [category_id] : [];
+  const conditions = [];
+  const params: (number)[] = [];
+  if (category_id !== null) {
+    conditions.push("b.category_id = ?");
+    params.push(category_id);
+  }
+  if (author_id !== null) {
+    conditions.push("ba.author_id = ?");
+    params.push(author_id);
+  }
+  const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
 
   const sql = `
     SELECT 
@@ -29,22 +40,23 @@ export async function GET(req: Request) {
       b.img_link,
       b.book_desc,
       b.language,
-      b.author_id,
       b.category_id,
       b.branch_id,
-      a.first_name AS author_first,
-      a.last_name AS author_last,
       c.category_name,
-      br.branch_name
+      br.branch_name,
+      ba.author_id,
+      a.first_name,
+      a.last_name
     FROM book b
-    JOIN author a ON b.author_id = a.author_id
     JOIN category c ON b.category_id = c.category_id
     JOIN branch br ON b.branch_id = br.branch_id
+    LEFT JOIN book_author ba ON ba.book_id = b.book_id
+    LEFT JOIN author a ON a.author_id = ba.author_id
     ${where}
     ORDER BY b.book_id DESC;
   `;
 
-  const { rows, error } = await query<BookRow[]>(sql, params);
+  const { rows, error } = await query<RowDataPacket[]>(sql, params);
 
   if (error || !rows) {
     let fallback = [
@@ -54,13 +66,11 @@ export async function GET(req: Request) {
         year_published: 2024,
         book_status: "available",
         img_link: "https://images.unsplash.com/photo-1521587760476-6c12a4b040da?w=800&auto=format&fit=crop",
-        author_id: 1,
-        author_first: "Unknown",
-        author_last: "Author",
         category_id: 1,
         category_name: "Fiction",
         branch_id: 1,
         branch_name: "Central",
+        authors: [{ author_id: 1, first_name: "Unknown", last_name: "Author" }],
       },
       {
         book_id: 2,
@@ -68,13 +78,11 @@ export async function GET(req: Request) {
         year_published: 2023,
         book_status: "available",
         img_link: "https://images.unsplash.com/photo-1495446815901-a7297e633e8d?w=800&auto=format&fit=crop",
-        author_id: 2,
-        author_first: "Digital",
-        author_last: "Curator",
         category_id: 2,
         category_name: "Technology",
         branch_id: 1,
         branch_name: "Central",
+        authors: [{ author_id: 2, first_name: "Digital", last_name: "Curator" }],
       },
     ];
     if (category_id !== null) {
@@ -86,7 +94,34 @@ export async function GET(req: Request) {
     );
   }
 
-  return NextResponse.json({ success: true, books: rows });
+  const byBook: Record<number, BookRow & { authors: { author_id: number; first_name: string; last_name: string }[] }> = {};
+  (rows as (BookRow & BookAuthorRow)[]).forEach((r) => {
+    if (!byBook[r.book_id]) {
+      byBook[r.book_id] = {
+        book_id: r.book_id,
+        title: r.title,
+        year_published: r.year_published,
+        book_status: r.book_status,
+        img_link: r.img_link,
+        book_desc: r.book_desc,
+        language: r.language,
+        category_id: r.category_id,
+        category_name: r.category_name,
+        branch_id: r.branch_id,
+        branch_name: r.branch_name,
+        authors: [],
+      };
+    }
+    if (r.author_id) {
+      byBook[r.book_id].authors.push({
+        author_id: r.author_id,
+        first_name: (r as any).first_name,
+        last_name: (r as any).last_name,
+      });
+    }
+  });
+
+  return NextResponse.json({ success: true, books: Object.values(byBook) });
 }
 
 //
@@ -98,7 +133,7 @@ export async function POST(req: Request) {
 
   const {
     title,
-    author_id: rawAuthorId,
+    author_ids: rawAuthorIds,
     category_id: rawCategoryId,
     year_published: rawYearPublished,
     branch_id: rawBranchId,
@@ -108,7 +143,7 @@ export async function POST(req: Request) {
     language,
   } = body;
 
-  const author_id = toNumber(rawAuthorId);
+  const author_ids = Array.isArray(rawAuthorIds) ? rawAuthorIds.map(toNumber).filter((n) => n !== null) : [];
   const category_id = toNumber(rawCategoryId);
   const year_published = toNumber(rawYearPublished);
   const branch_id = toNumber(rawBranchId);
@@ -122,7 +157,7 @@ export async function POST(req: Request) {
   }
 
   if (
-    author_id === null ||
+    author_ids.length === 0 ||
     category_id === null ||
     year_published === null ||
     branch_id === null
@@ -136,7 +171,6 @@ export async function POST(req: Request) {
   const sql = `
     INSERT INTO book (
       title,
-      author_id,
       category_id,
       year_published,
       branch_id,
@@ -145,12 +179,11 @@ export async function POST(req: Request) {
       book_desc,
       language
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?);
   `;
 
   const { rows, error } = await query<ResultSetHeader>(sql, [
     title,
-    author_id,
     category_id,
     year_published,
     branch_id,
@@ -174,9 +207,19 @@ export async function POST(req: Request) {
     );
   }
 
+  const bookId = rows.insertId;
+
+  const authorInserts = author_ids.map((aid) =>
+    query<ResultSetHeader>(
+      `INSERT INTO book_author (book_id, author_id) VALUES (?, ?);`,
+      [bookId, aid]
+    )
+  );
+  await Promise.all(authorInserts).catch(() => {});
+
   return NextResponse.json({
     success: true,
-    book_id: rows.insertId,
+    book_id: bookId,
   });
 }
 
@@ -190,7 +233,7 @@ export async function PUT(req: Request) {
   const {
     book_id: rawBookId,
     title,
-    author_id: rawAuthorId,
+    author_ids: rawAuthorIds,
     category_id: rawCategoryId,
     year_published: rawYearPublished,
     branch_id: rawBranchId,
@@ -201,7 +244,7 @@ export async function PUT(req: Request) {
   } = body;
 
   const book_id = toNumber(rawBookId);
-  const author_id = toNumber(rawAuthorId);
+  const author_ids = Array.isArray(rawAuthorIds) ? rawAuthorIds.map(toNumber).filter((n) => n !== null) : [];
   const category_id = toNumber(rawCategoryId);
   const year_published = toNumber(rawYearPublished);
   const branch_id = toNumber(rawBranchId);
@@ -216,7 +259,7 @@ export async function PUT(req: Request) {
 
   if (
     book_id === null ||
-    author_id === null ||
+    author_ids.length === 0 ||
     category_id === null ||
     year_published === null ||
     branch_id === null
@@ -231,7 +274,6 @@ export async function PUT(req: Request) {
     UPDATE book
     SET
       title = ?,
-      author_id = ?,
       category_id = ?,
       year_published = ?,
       branch_id = ?,
@@ -244,7 +286,6 @@ export async function PUT(req: Request) {
 
   const { rows, error } = await query<ResultSetHeader>(sql, [
     title,
-    author_id,
     category_id,
     year_published,
     branch_id,
@@ -275,6 +316,16 @@ export async function PUT(req: Request) {
       { status: 404 }
     );
   }
+
+  // refresh author mappings
+  await query<ResultSetHeader>(`DELETE FROM book_author WHERE book_id = ?;`, [book_id]).catch(() => {});
+  const authorInserts = author_ids.map((aid) =>
+    query<ResultSetHeader>(
+      `INSERT INTO book_author (book_id, author_id) VALUES (?, ?);`,
+      [book_id, aid]
+    )
+  );
+  await Promise.all(authorInserts).catch(() => {});
 
   if (book_status !== "borrowed") {
     await query<ResultSetHeader>(

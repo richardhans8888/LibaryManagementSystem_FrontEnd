@@ -9,13 +9,11 @@ type BookRow = {
   year_published: number;
   book_status: string;
   img_link: string;
-  author_id: number;
-  author_first: string;
-  author_last: string;
   book_desc?: string | null;
   language?: string | null;
   category_name: string;
   branch_name: string;
+  authors: { author_id: number; first_name: string; last_name: string }[];
 };
 
 export default function Page() {
@@ -134,9 +132,16 @@ export default function Page() {
             <div className="text-3xl font-semibold">{book.title}</div>
             <div className="mt-2 text-sm">
               by{" "}
-              <Link href={`/authors/${book.author_id ?? ""}`} className="text-blue-700 hover:underline">
-                {book.author_first} {book.author_last}
-              </Link>
+              {book.authors.length === 0
+                ? "Unknown"
+                : book.authors.map((a, idx) => (
+                    <span key={a.author_id}>
+                      <Link href={`/authors/${a.author_id}`} className="text-blue-700 hover:underline">
+                        {a.first_name} {a.last_name}
+                      </Link>
+                      {idx < book.authors.length - 1 ? ", " : ""}
+                    </span>
+                  ))}
             </div>
           </div>
 

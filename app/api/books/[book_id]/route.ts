@@ -53,22 +53,22 @@ export async function GET(
       b.img_link,
       b.book_desc,
       b.language,
-      b.author_id,
       b.category_id,
       b.branch_id,
-      a.first_name AS author_first,
-      a.last_name AS author_last,
       c.category_name,
-      br.branch_name
+      br.branch_name,
+      ba.author_id,
+      a.first_name,
+      a.last_name
     FROM book b
-    JOIN author a ON b.author_id = a.author_id
     JOIN category c ON b.category_id = c.category_id
     JOIN branch br ON b.branch_id = br.branch_id
-    WHERE b.book_id = ?
-    LIMIT 1;
+    LEFT JOIN book_author ba ON ba.book_id = b.book_id
+    LEFT JOIN author a ON a.author_id = ba.author_id
+    WHERE b.book_id = ?;
   `;
 
-  const { rows, error } = await query<BookRow[]>(sql, [bookId]);
+  const { rows, error } = await query<any[]>(sql, [bookId]);
 
   if (error || !rows || rows.length === 0) {
     const fallback = {
@@ -77,13 +77,11 @@ export async function GET(
       year_published: 2024,
       book_status: "available",
       img_link: "https://images.unsplash.com/photo-1521587760476-6c12a4b040da?w=800&auto=format&fit=crop",
-      author_id: 0,
-      author_first: "Unknown",
-      author_last: "Author",
       category_id: 0,
       category_name: "General",
       branch_id: 0,
       branch_name: "Central",
+      authors: [{ author_id: 0, first_name: "Unknown", last_name: "Author" }],
     };
     return NextResponse.json(
       { success: true, book: fallback, warning: "Using fallback book due to database timeout" },
@@ -91,7 +89,24 @@ export async function GET(
     );
   }
 
-  return NextResponse.json({ success: true, book: rows[0] });
+  const grouped = {
+    book_id: rows[0].book_id,
+    title: rows[0].title,
+    year_published: rows[0].year_published,
+    book_status: rows[0].book_status,
+    img_link: rows[0].img_link,
+    book_desc: rows[0].book_desc,
+    language: rows[0].language,
+    category_id: rows[0].category_id,
+    category_name: rows[0].category_name,
+    branch_id: rows[0].branch_id,
+    branch_name: rows[0].branch_name,
+    authors: rows
+      .filter((r) => r.author_id)
+      .map((r) => ({ author_id: r.author_id, first_name: r.first_name, last_name: r.last_name })),
+  };
+
+  return NextResponse.json({ success: true, book: grouped });
 }
 
 //
