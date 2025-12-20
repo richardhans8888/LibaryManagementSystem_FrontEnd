@@ -33,8 +33,9 @@ function extractAuthorId(
 // ========================================================
 export async function GET(
   req: Request,
-  { params }: { params: { author_id: string | string[] } }
+  context: { params: Promise<{ author_id: string }> }
 ) {
+  const params = await context.params;
   const authorId = extractAuthorId(params, req.url);
 
   if (authorId === null) {
@@ -85,8 +86,9 @@ export async function GET(
 // ========================================================
 export async function DELETE(
   req: Request,
-  { params }: { params: { author_id: string | string[] } }
+  context: { params: Promise<{ author_id: string }> }
 ) {
+  const params = await context.params;
   const authorId = extractAuthorId(params, req.url);
 
   if (authorId === null) {
@@ -136,8 +138,9 @@ export async function DELETE(
 // ========================================================
 export async function PUT(
   req: Request,
-  { params }: { params: { author_id: string | string[] } }
+  context: { params: Promise<{ author_id: string }> }
 ) {
+  const params = await context.params;
   const authorId = extractAuthorId(params, req.url);
 
   if (authorId === null) {

@@ -15,11 +15,13 @@ type BookRow = {
   title: string;
   year_published: number;
   book_status: string;
+  is_digital: 0 | 1;
   img_link: string;
+  author_first: string;
+  author_last: string;
   category_id: number;
   category_name: string;
   branch_name: string;
-  authors: { author_id: number; first_name: string; last_name: string }[];
 };
 
 export default function Page() {
@@ -68,14 +70,6 @@ export default function Page() {
     loadBooks(categoryId);
   }, [categoryId]);
 
-  const statusBadge = (value: string) => {
-    const base = "inline-flex items-center rounded-full px-2 py-1 text-[11px]";
-    if (value === "available") return `${base} bg-green-100`;
-    if (value === "reserved") return `${base} bg-amber-100`;
-    if (value === "borrowed") return `${base} bg-blue-100`;
-    return `${base} bg-zinc-200`;
-  };
-
   const onCategoryChange = (val: string) => {
     const cat = toNumber(val || null);
     setCategoryId(cat);
@@ -85,55 +79,66 @@ export default function Page() {
     router.replace(`/books${sp.toString() ? "?" + sp.toString() : ""}`);
   };
 
-  const latestBooks = useMemo(() => books.slice().sort((a, b) => b.book_id - a.book_id).slice(0, 8), [books]);
-
-  const displayBooks = useMemo(() => latestBooks, [latestBooks]);
+  const latestBooks = useMemo(() => books.slice().sort((a, b) => b.book_id - a.book_id), [books]);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <div className="text-2xl font-semibold">All Books</div>
+    <div className="min-h-screen bg-white font-sans">
+      <div className="bg-[#f8f9fa] border-b border-zinc-200">
+        <div className="mx-auto max-w-7xl px-6 py-12">
+          <h1 className="font-serif text-4xl font-bold text-[#0d2538]">Library Collection</h1>
+          <p className="mt-2 text-zinc-600">Explore our extensive catalog of books, journals, and media.</p>
         </div>
-        <select
-          value={categoryId ?? ""}
-          onChange={(e) => onCategoryChange(e.target.value)}
-          className="rounded-xl border border-zinc-300 px-3 py-2 text-sm"
-        >
-          <option value="">All</option>
-          {categories.map((c) => (
-            <option key={c.category_id} value={c.category_id}>
-              {c.category_name}
-            </option>
-          ))}
-        </select>
       </div>
 
-      {error ? <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">{error}</div> : null}
+      <div className="mx-auto max-w-7xl px-6 py-10 flex flex-col md:flex-row gap-10">
+        <aside className="w-full md:w-64 shrink-0 space-y-8">
+          <div>
+            <div className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-4">Categories</div>
+            <div className="space-y-2">
+              <button
+                onClick={() => onCategoryChange("")}
+                className={`block text-sm w-full text-left ${!categoryId ? "font-semibold text-[#0d2538]" : "text-zinc-600 hover:text-[#0d2538]"}`}
+              >
+                All Categories
+              </button>
+              {categories.map((c) => (
+                <button
+                  key={c.category_id}
+                  onClick={() => onCategoryChange(String(c.category_id))}
+                  className={`block text-sm w-full text-left ${categoryId === c.category_id ? "font-semibold text-[#0d2538]" : "text-zinc-600 hover:text-[#0d2538]"}`}
+                >
+                  {c.category_name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </aside>
 
-      <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-8">
-        {loading ? (
-          <div className="col-span-full text-sm text-black/60">Loading books...</div>
-        ) : latestBooks.length === 0 ? (
-          <div className="col-span-full text-sm text-black/60">No books available.</div>
-        ) : (
-          displayBooks.map((b) => (
-            <Link href={`/books/${b.book_id}`} key={b.book_id} className="group">
-              <div className="overflow-hidden rounded-md">
-                <div className="aspect-[4/5] w-full bg-zinc-100">
-                  <img src={b.img_link} alt={b.title} className="h-full w-full object-cover" />
-                </div>
-              </div>
-              <div className="mt-2 text-xs text-black text-center">
-                {b.title}
-                <div className="text-[11px] italic text-black/70">{b.branch_name}</div>
-              </div>
-            </Link>
-          ))
-        )}
-      </div>
+        <div className="flex-1">
+          {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900 mb-6">{error}</div> : null}
 
-      <div className="mt-10 text-sm text-black/60">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-10">
+            {loading ? (
+              <div className="col-span-full text-sm text-black/60">Loading books...</div>
+            ) : latestBooks.length === 0 ? (
+              <div className="col-span-full text-sm text-black/60">No books available.</div>
+            ) : (
+              latestBooks.map((b) => (
+                <Link href={`/books/${b.book_id}`} key={b.book_id} className="group flex flex-col">
+                  <div className="overflow-hidden rounded-md border border-zinc-200 bg-zinc-100 shadow-sm transition-all group-hover:shadow-md">
+                    <div className="aspect-[2/3] w-full relative">
+                      <img src={b.img_link} alt={b.title} className="absolute inset-0 h-full w-full object-cover" />
+                    </div>
+                  </div>
+                  <div className="mt-3 flex flex-col gap-1">
+                    <div className="text-sm font-semibold text-[#0d2538] line-clamp-2 leading-tight">{b.title}</div>
+                    <div className="text-xs text-zinc-500">{b.author_first} {b.author_last}</div>
+                  </div>
+                </Link>
+              ))
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

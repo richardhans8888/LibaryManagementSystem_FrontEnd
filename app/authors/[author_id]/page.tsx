@@ -10,6 +10,7 @@ type Book = {
   img_link: string;
   book_status: string;
   branch_name: string;
+  authors?: { author_id: number }[];
 };
 
 export default function Page() {
@@ -35,7 +36,7 @@ export default function Page() {
         if (!aRes.ok || !aData.success) throw new Error(aData.error || "Failed to load author");
         if (!bRes.ok || !bData.success) throw new Error(bData.error || "Failed to load books");
         setAuthor(aData.author);
-        const filtered = (bData.books as any[]).filter((bk) =>
+        const filtered = (bData.books as Book[]).filter((bk) =>
           Array.isArray(bk.authors) && bk.authors.some((au) => au.author_id === authorIdNum)
         );
         setBooks(filtered);
